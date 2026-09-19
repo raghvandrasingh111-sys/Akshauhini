@@ -8,7 +8,12 @@
   }
 
   body {
-    @apply bg-slate-50 text-slate-900 font-sans;
+    @apply bg-[#F8FAFC] text-slate-900 font-sans;
+    font-feature-settings: 'cv02' on, 'cv03' on, 'cv04' on, 'liga' off;
+  }
+
+  * {
+    @apply border-slate-200;
   }
 }
 

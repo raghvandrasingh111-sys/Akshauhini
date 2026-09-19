@@ -5,13 +5,13 @@ export default {
     extend: {
       colors: {
         medikiosk: {
-          primary: '#0D9488',
-          'primary-dark': '#0F766E',
-          secondary: '#0284C7',
-          accent: '#059669',
-          emergency: '#DC2626',
+          primary: '#0F5132',
+          'primary-dark': '#0A3E29',
+          secondary: '#0D9488',
+          accent: '#16A34A',
+          emergency: '#DC3545',
           'emergency-light': '#FEE2E2',
-          surface: '#F0FDFA',
+          surface: '#F8FAFC',
           muted: '#64748B',
           border: '#E2E8F0',
         },
@@ -22,10 +22,10 @@ export default {
         },
       },
       fontFamily: {
-        sans: ['Inter', 'Noto Sans Devanagari', 'system-ui', 'sans-serif'],
+        sans: ['Inter', 'Manrope', 'Noto Sans Devanagari', 'system-ui', 'sans-serif'],
       },
       boxShadow: {
-        kiosk: '0 4px 24px rgba(13, 148, 136, 0.12)',
+        kiosk: '0 4px 24px rgba(15, 81, 50, 0.12)',
         card: '0 2px 12px rgba(15, 23, 42, 0.06)',
       },
       animation: {

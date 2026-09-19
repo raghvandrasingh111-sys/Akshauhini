@@ -70,9 +70,7 @@ export interface VerifyAadhaarOtpRequest {
 
 export interface AbhaSdkConfig {
   baseUrl: string
-  bearerToken?: string
   clientId?: string
-  clientSecret?: string
   useSimulation: boolean
 }
 
@@ -261,7 +259,6 @@ export class AbhaApiClient {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...(this.config.bearerToken ? { Authorization: `Bearer ${this.config.bearerToken}` } : {}),
       },
       body: JSON.stringify(req),
     })
@@ -306,7 +303,6 @@ export class AbhaApiClient {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...(this.config.bearerToken ? { Authorization: `Bearer ${this.config.bearerToken}` } : {}),
       },
       body: JSON.stringify(req),
     })
@@ -334,7 +330,6 @@ export class AbhaApiClient {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...(this.config.bearerToken ? { Authorization: `Bearer ${this.config.bearerToken}` } : {}),
       },
       body: JSON.stringify(req),
     })

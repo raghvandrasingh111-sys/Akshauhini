@@ -1,92 +1,328 @@
-# Akshauhini — MediKiosk Clinical Intake Platform
+# Sanjeevani
 
-**Smart India Hackathon 2026 · Problem ID: SIH26047**  
-Ministry of Ayush (AIIA) · MedTech / HealthTech
+Sanjeevani is an AI-assisted digital patient intake and physician clinical dashboard built for Indian hospital OPDs. It is designed to streamline patient intake, surface clinically relevant information before consultation, and help doctors review patient history, documents, and AI-generated summaries with full accountability.
 
-MediKiosk is a first-mile clinical intake kiosk that offloads structured history-taking from overburdened OPD physicians. Patients narrate their history in local languages via voice or touch, scan paper medical records via OCR, and deliver a physician-ready FHIR summary before consultation begins.
+The physician-facing interface is not designed to replace clinical judgment. Instead, it supports doctors by organizing patient information, flagging urgent findings, and keeping the final medical decision in the physician's control.
 
-## Features
+## Product Purpose
 
-### Module A — Conversational History Engine
-- Dual-mode **Voice + Touch** UI with Hindi/English/regional language support
-- Adaptive clinical branching (SOCRATES pain framework)
-- **AYUSH Dashavidha Pariksha** mode (Prakriti, Vikriti, Agni, Koshtha, etc.)
-- Real-time **Red-Flag Triage Engine** (chest pain, dyspnea, stroke indicators)
+Sanjeevani enables a modern, hospital-grade workflow that moves patients from:
 
-### Module B — Document Digitization
-- Multilingual OCR simulation for prescriptions, lab reports, discharge summaries
-- Clinical entity extraction (diagnoses, medications, lab values)
-- Chronological timeline with abnormal value flagging
+- patient registration and intake
+- ABHA-based record lookup
+- consented record access
+- AI-generated clinical brief
+- medical document review
+- physician verification and consultation
 
-### Module C — Structured Summary Generator
-- Standardized physician summary (CC → HPI → Past History → Meds → Allergies → ROS)
-- Editable draft on physician dashboard
-- Bilingual audio confirmation for patients
+without dropping the doctor into fragmented or low-trust systems.
 
-### Module D — Consent & Interoperability
-- DPDP Act 2023 compliant granular consent flow
-- ABHA identity verification
-- FHIR R4 bundle generation for EMR integration
+## Core Design Principles
 
-## Quick Start
+- Clinical, readable, and information-dense interface
+- Desktop-first OPD workflow with tablet support
+- Strong hierarchy and minimal visual noise
+- Clear provenance of information sources
+- AI-generated content labeled and verifiable
+- Privacy-aware, consent-driven data access
+- High trust and accountability throughout the consultation workflow
 
-```bash
-npm install
-npm run dev
+## System Overview
+
+Sanjeevani combines:
+
+- multilingual patient intake via voice and touch
+- AYUSH and allopathic clinical assessment flows
+- red-flag symptom detection during intake
+- OCR/document extraction for prescriptions and reports
+- structured physician summaries from patient intake and medical records
+- secure record access with patient consent management
+
+## Physician Dashboard Goals
+
+The doctor portal is built to help clinicians answer these questions quickly:
+
+- Who is waiting and what is their urgency?
+- Has this patient already provided enough intake information?
+- Are there relevant historical records available?
+- Is there an alert requiring review before consultation?
+- What has the AI summarized, and what still needs physician verification?
+- What documents and timeline details should be reviewed before the note is finalized?
+
+## Key Features
+
+### 1. OPD Queue and Clinical Prioritization
+- Today's patient queue with waiting time and risk classification
+- Priority patient identification for red-flag symptoms
+- Queue filters for waiting, priority, in consultation, and completed patients
+- Quick access to patient intake status and chief complaint overview
+
+### 2. ABHA Patient Search
+- Search by ABHA number, ABHA address, or patient identifier
+- Secure patient lookup workflow
+- Record availability and updated timestamp display
+- Request access only after the doctor has a valid clinical need
+
+### 3. Consent and Record Access
+- Professional access request flow with purpose and requested record types
+- Access duration controls and audit visibility
+- Clear recommendation to obtain patient consent before record access
+- Access grant and history tracking
+
+### 4. Patient Clinical Workspace
+- Unified patient record view for one consultation
+- Patient header with demographic summary and token status
+- Intake completion state and secure session indicators
+- Unified access to records, AI summary, notes, and timeline
+
+### 5. AI Clinical Brief
+- Compact summary generated from intake + authorized records
+- Clearly labeled as AI-generated and requiring physician verification
+- Sections for chief complaint, relevant history, current intake, and missing information
+- Source-backed summary generation with review links
+
+### 6. Structured Clinical Summary
+- Chief complaint and HPI sections
+- Review of systems and red flags
+- Medical history, medications, allergies, family history, and social history
+- AYUSH assessment section with structured parameters
+- Vitals and current consultation metadata
+
+### 7. Medical Documents and Timeline
+- Document viewer grouped by prescriptions, lab reports, discharge summaries, and other records
+- OCR-extracted values with original source visibility
+- Medical timeline for consultations, tests, hospitalizations, and current intake
+- Clickable events to open source records
+
+### 8. Consultation Workflow
+- Start consultation mode from the patient workspace
+- Sticky action bar for saving a draft, adding prescription, completing consultation, referral, and follow-up
+- Clear distinction between patient-provided data and AI interpretation
+
+### 9. AI Assistant Panel
+- Safe actions such as summarizing intake, reviewing prior records, or surfacing missing information
+- Source-aware explanations and citations for AI output
+- No autonomous diagnosis or prescribing behavior
+
+### 10. Emergency and Notification Center
+- Priority alert workflow for red-flag intake cases
+- Emergency center for urgent patients
+- Hospital notifications for new patients, consent changes, document processing, and intake events
+
+### 11. Audit and Accountability
+- Access history for patient record requests and grant events
+- Record of AI-generated summary creation and physician edits
+- Transparent clinical provenance and secure session markers
+
+## User Experience Flow
+
+A typical doctor workflow is:
+
+1. Open the physician dashboard.
+2. Review the OPD queue and identify priority patients.
+3. Search for a patient through ABHA lookup or queue selection.
+4. Request and receive patient consent before viewing sensitive records.
+5. Review clinical alerts, AI summary, records, and timeline.
+6. Confirm or edit the AI-generated brief.
+7. Start consultation and document the patient encounter.
+8. Save a draft, add treatment notes, or complete the consultation.
+
+## Design System
+
+### Brand
+- Product: Sanjeevani
+- Primary color: #0F5132
+- Secondary color: #0D9488
+- Background: #F8FAFC
+- Surface: #FFFFFF
+- Primary text: #0F172A
+- Secondary text: #64748B
+- Border: #E2E8F0
+- Emergency: #DC3545
+- Warning: #F59E0B
+- Success: #16A34A
+
+### Typography
+- Inter or Manrope
+- Strong hierarchy for clinical readability
+- Compact but accessible spacing
+
+### Visual Direction
+- Professional healthcare EMR aesthetic
+- Calm clinical presentation
+- Subtle depth and hierarchy
+- High information density without clutter
+
+## Application Layout
+
+The dashboard follows a persistent shell:
+
+```text
+┌────────────────────────────────────────────────────────────────────┐
+│ SANJEEVANI                 Search Patient          Alerts  Dr. Sharma │
+├───────────────────────┬──────────────────────────────────────────────┤
+│ Sidebar               │ Main clinical workspace                     │
+│ • Dashboard           │                                            │
+│ • Patient Queue       │ OPD overview / queue / patient details      │
+│ • ABHA Patients       │                                            │
+│ • Consultations       │                                            │
+│ • Records             │                                            │
+│ • AI Summaries        │                                            │
+│ • Emergencies         │                                            │
+│ • Reports             │                                            │
+│ • Settings            │                                            │
+└───────────────────────┴──────────────────────────────────────────────┘
 ```
 
-Open **http://localhost:5173** for the Patient Kiosk.  
-Switch to **Physician EMR** via the bottom navigation bar.
+## Demo Data
 
-## Demo Flow (For Judges)
+For development and demo purposes, include realistic sample patient data such as:
 
-1. Open Patient Kiosk → Select **Hindi**
-2. Click **Demo Mode** on identity screen
-3. Grant all consent checkboxes
-4. Select **Allopathic** or **AYUSH** mode
-5. On interview Q1, click **Demo: "3 din se chest pain…"** or speak it
-6. Continue through questions — watch **Emergency Alert** trigger
-7. Scan a **Lab Report** on document screen
-8. Generate summary → switch to **Physician EMR** tab
-9. Review pre-populated structured summary with red flags
+- A**** Kumar
+- Age: 42
+- Gender: Male
+- Token: A-142
+- Chief complaint: abdominal pain
+- Prior records: 3
+- Intake status: complete
+- Risk: routine
 
-Alternatively, click **Load Demo Case** on the Physician Dashboard.
+This data must be clearly labeled as DEMO DATA.
 
-## Architecture
+## Data States
 
-```
-src/
-├── components/
-│   ├── kiosk/          # Patient-facing intake screens
-│   ├── physician/        # EMR dashboard
-│   └── ui/               # Shared UI primitives
-├── context/              # Global state management
-├── data/                 # Clinical question ontologies
-├── services/
-│   ├── triageEngine.ts   # Red-flag detection
-│   ├── ocrService.ts     # Document processing
-│   └── fhirGenerator.ts  # FHIR R4 bundle builder
-└── types/                # TypeScript interfaces
-```
+The dashboard should support the following UI states:
+
+- loading
+- success
+- empty
+- error
+- unauthorized
+- consent_required
+- consent_granted
+- record_unavailable
+- ai_processing
+- ai_complete
+
+## Security and Privacy
+
+The system emphasizes safe clinical data handling:
+
+- masked sensitive identifiers
+- ABHA lookup with access boundary controls
+- consent-based record access
+- secure session indicators
+- audit trail for access, AI generation, and physician edits
+- no full Aadhaar or identity exposure in the UI
+
+## Error and Loading Experience
+
+The UI should always communicate state clearly:
+
+- Retrieving authorized records...
+- Generating clinical summary...
+- Unable to retrieve records.
+- Patient consent is required before accessing health information.
+- AI summary could not be generated. Continue with original patient intake.
+
+Errors must not block the clinical workflow entirely.
+
+## Component Architecture
+
+The application should be built using reusable React and TypeScript components, including:
+
+- DoctorLayout
+- Sidebar
+- TopNavigation
+- PatientQueue
+- PatientSearch
+- ABHAPatientSearch
+- ConsentModal
+- PatientHeader
+- ClinicalAlert
+- AIClinicalBrief
+- ClinicalSummary
+- HPISection
+- VitalsCard
+- MedicationList
+- AllergyList
+- AYUSHAssessment
+- MedicalDocuments
+- DocumentViewer
+- MedicalTimeline
+- IntakeSummary
+- EmergencyAlert
+- AIClinicalAssistant
+- ConsultationWorkspace
+- AuditTimeline
+- NotificationPanel
 
 ## Tech Stack
 
-- **Frontend:** React 18 + TypeScript + Vite
-- **Styling:** Tailwind CSS (see `DESIGN.md` for design system)
-- **Routing:** React Router v6
-- **Speech:** Web Speech API (ASR + TTS) with touch fallback
-- **Storage:** localStorage (demo); production → FHIR API + ABDM
+- React
+- TypeScript
+- Vite
+- Tailwind CSS
+- React Router
+- Local state management for demo workflows
+- Optional future API integration for FHIR, ABHA, and AI services
 
-## Production Roadmap
+## Project Structure
 
-| Component | Demo | Production |
-|---|---|---|
-| ASR | Web Speech API | AI4Bharat Bhashini / IndicWhisper |
-| OCR | Simulated extraction | PaddleOCR + medical NER |
-| LLM | Rule-based branching | Constrained LLM with clinical ontology |
-| EMR | localStorage | HL7 FHIR R4 REST API |
-| Auth | Manual ABHA entry | ABDM ABHA OAuth |
+```bash
+src/
+├── components/
+│   ├── kiosk/
+│   ├── physician/
+│   └── ui/
+├── context/
+├── data/
+├── services/
+├── types/
+├── pages/
+├── App.tsx
+├── main.tsx
+├── index.css
+└── vite-env.d.ts
+```
+
+## Getting Started
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+Run the app locally:
+
+```bash
+npm run dev
+```
+
+Open the app in the browser:
+
+```text
+http://localhost:5173
+```
+
+## Design Reference
+
+The product visual system and UI research notes are documented in [DESIGN.md](DESIGN.md).
+
+## Acceptance Criteria
+
+The final physician dashboard should feel like a serious hospital-grade clinical product and should:
+
+- surface patient queue and urgency clearly
+- support ABHA-based lookup and consent flow
+- expose authorized records without exposing sensitive data prematurely
+- display a physician-verifiable AI summary
+- provide a single, unified clinical workspace for patient review and consultation
+- distinguish patient-provided data from AI-generated interpretation
+- include audit trail and accountable record access
+- be suitable for desktop-first clinical use with tablet resilience
 
 ## License
 
-Built for Smart India Hackathon 2026 — SIH26047.
+This project is a healthcare prototype and is intended for demonstration, evaluation, and further product development in the context of digital OPD workflow design.
