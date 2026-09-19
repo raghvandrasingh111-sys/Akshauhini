@@ -13,7 +13,7 @@ const LANGUAGES: { code: Language; label: string; native: string }[] = [
 ]
 
 export function WelcomeScreen() {
-  const { language, setLanguage, setStep } = useApp()
+  const { language, setLanguage } = useApp()
   const navigate = useNavigate()
 
   return (
@@ -77,7 +77,7 @@ export function WelcomeScreen() {
             <button onClick={() => navigate('/patient')} className="w-full py-3 rounded-xl border border-teal-300 bg-teal-50 text-teal-800 font-semibold hover:bg-teal-100 transition-colors">
               {t(language, 'welcome.patientPortal')}
             </button>
-            <button onClick={() => setStep('identity')} className="kiosk-btn-primary w-full">
+            <button onClick={() => navigate('/patient')} className="kiosk-btn-primary w-full">
               {t(language, 'welcome.continue')}
             </button>
             <button onClick={() => navigate('/doctor')} className="w-full py-3 rounded-xl border border-slate-300 text-slate-600 font-semibold hover:border-teal-500 hover:text-teal-700 transition-colors">

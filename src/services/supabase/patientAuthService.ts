@@ -15,6 +15,36 @@ export async function signUpPatient(phone: string, password: string) {
   return supabase.auth.signUp({ phone: normalizePatientPhone(phone), password })
 }
 
+export async function signInPatientWithGoogle() {
+  if (!supabase) return { data: { provider: null, url: null }, error: new Error('Supabase is not configured') }
+  return supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: `${window.location.origin}/patient` },
+  })
+}
+
+export async function registerGooglePatient(input: {
+  aadhaarNumber: string
+  fullName: string
+  age: number
+  gender: 'male' | 'female' | 'other'
+  phone: string
+  email: string
+}) {
+  if (!supabase) throw new Error('Supabase is not configured')
+  const { data, error } = await supabase.rpc('register_google_patient', {
+    p_aadhaar_number: input.aadhaarNumber,
+    p_full_name: input.fullName,
+    p_age: input.age,
+    p_gender: input.gender,
+    p_phone: input.phone,
+    p_email: input.email,
+    p_hospital_id: import.meta.env.VITE_DEFAULT_HOSPITAL_ID || null,
+  })
+  if (error) throw error
+  return data
+}
+
 export async function signInPatient(phone: string, password: string) {
   if (!supabase) return { data: { user: null, session: null }, error: new Error('Supabase is not configured') }
   return supabase.auth.signInWithPassword({ phone: normalizePatientPhone(phone), password })

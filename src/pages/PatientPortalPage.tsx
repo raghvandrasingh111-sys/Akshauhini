@@ -2,7 +2,7 @@ import { FormEvent, useEffect, useState } from 'react'
 import { ArrowUpRight, Check, FileImage, FileText, Fingerprint, HeartPulse, LockKeyhole, LogOut, ShieldCheck, UploadCloud } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { usePatientAuth } from '../context/PatientAuthContext'
-import { isValidPatientPhone, signInPatient, signUpPatient } from '../services/supabase/patientAuthService'
+import { isValidPatientPhone, registerGooglePatient, signInPatientWithGoogle, signInPatient, signUpPatient } from '../services/supabase/patientAuthService'
 import { getPatientConsentRequests, getPatientDocuments, respondToPatientConsent, uploadPatientDocument } from '../services/supabase/patientPortalService'
 import type { ConsentRequest, MedicalDocument } from '../types/database'
 import { abhaSdkService, type AbhaAuthMethod } from '../services/abhaSdkService'
@@ -14,6 +14,45 @@ export function PatientPortalPage() {
 }
 
 function PatientLogin() {
+  const { session } = usePatientAuth()
+  if (session) return <PatientProfileSetup />
+  return <GooglePatientLogin />
+}
+
+function GooglePatientLogin() {
+  const navigate = useNavigate()
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const login = async () => {
+    setBusy(true)
+    const result = await signInPatientWithGoogle()
+    if (result.error) { setError(result.error.message); setBusy(false) }
+  }
+  return <main className="min-h-screen bg-[#EAF4F0] px-4 py-10 text-slate-900"><div className="mx-auto max-w-md"><div className="mb-8 text-center"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#0F5132] text-white shadow-lg"><HeartPulse /></div><p className="mt-4 text-xs font-bold uppercase tracking-[0.22em] text-teal-700">Sanjeevani patient space</p><h1 className="mt-2 text-3xl font-black">Your health, your control.</h1><p className="mt-2 text-sm text-slate-500">Sign in once with Google. Your Aadhaar becomes your private Patient ID.</p></div><section className="rounded-[2rem] bg-white p-7 shadow-xl shadow-teal-900/10"><div className="flex items-center gap-3 rounded-2xl bg-teal-50 p-4"><ShieldCheck className="h-6 w-6 text-teal-700" /><p className="text-sm font-semibold text-teal-900">Secure Google account, private clinical records, patient-controlled approval.</p></div>{error && <p className="mt-4 rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}<button onClick={() => void login()} disabled={busy} className="mt-6 flex w-full items-center justify-center gap-3 rounded-xl bg-[#0F5132] px-4 py-4 font-bold text-white disabled:opacity-50"><span className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-sm font-black text-[#0F5132]">G</span>{busy ? 'Opening Google...' : 'Continue with Google'}</button><button onClick={() => navigate('/')} className="mt-6 w-full text-sm text-slate-500">Back to kiosk</button></section></div></main>
+}
+
+function PatientProfileSetup() {
+  const { session } = usePatientAuth()
+  const [fullName, setFullName] = useState(String(session?.user.user_metadata?.full_name ?? ''))
+  const [phone, setPhone] = useState('')
+  const [age, setAge] = useState('')
+  const [gender, setGender] = useState<'male' | 'female' | 'other'>('male')
+  const [aadhaar, setAadhaar] = useState('')
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
+  const save = async (event: FormEvent) => {
+    event.preventDefault(); setError('')
+    if (!/^\d{12}$/.test(aadhaar)) return setError('Enter a valid 12-digit Aadhaar number.')
+    if (!isValidPatientPhone(phone)) return setError('Enter a valid 10-digit phone number.')
+    if (!fullName.trim() || !age || Number(age) < 1 || Number(age) > 120) return setError('Enter your name and a valid age.')
+    setBusy(true)
+    try { await registerGooglePatient({ aadhaarNumber: aadhaar, fullName: fullName.trim(), age: Number(age), gender, phone, email: session?.user.email ?? '' }); window.location.reload() }
+    catch (saveError) { setError(saveError instanceof Error ? saveError.message : 'Could not save your patient profile.'); setBusy(false) }
+  }
+  return <main className="min-h-screen bg-[#EAF4F0] px-4 py-10 text-slate-900"><div className="mx-auto max-w-lg"><section className="rounded-[2rem] bg-white p-7 shadow-xl shadow-teal-900/10"><div className="mb-6"><p className="text-xs font-bold uppercase tracking-[0.2em] text-teal-700">One-time setup</p><h1 className="mt-2 text-3xl font-black">Complete your patient profile</h1><p className="mt-2 text-sm text-slate-500">Signed in as {session?.user.email}. Aadhaar is used only as your unique Patient ID.</p></div><form onSubmit={save} className="space-y-4"><label className="block text-xs font-bold uppercase tracking-wider text-slate-500">Full name<input value={fullName} onChange={e => setFullName(e.target.value)} className="mt-2 w-full rounded-xl border-2 border-slate-200 px-4 py-3 outline-none focus:border-teal-600" /></label><label className="block text-xs font-bold uppercase tracking-wider text-slate-500">Aadhaar number<input value={aadhaar} onChange={e => setAadhaar(e.target.value.replace(/\D/g, '').slice(0, 12))} inputMode="numeric" placeholder="12-digit Aadhaar" className="mt-2 w-full rounded-xl border-2 border-teal-200 px-4 py-3 font-mono outline-none focus:border-teal-600" /></label><div className="grid grid-cols-2 gap-3"><label className="block text-xs font-bold uppercase tracking-wider text-slate-500">Age<input value={age} onChange={e => setAge(e.target.value.replace(/\D/g, '').slice(0, 3))} inputMode="numeric" className="mt-2 w-full rounded-xl border-2 border-slate-200 px-4 py-3 outline-none focus:border-teal-600" /></label><label className="block text-xs font-bold uppercase tracking-wider text-slate-500">Sex<select value={gender} onChange={e => setGender(e.target.value as typeof gender)} className="mt-2 w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3"><option value="male">Male</option><option value="female">Female</option><option value="other">Other</option></select></label></div><label className="block text-xs font-bold uppercase tracking-wider text-slate-500">Phone number<input value={phone} onChange={e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))} inputMode="numeric" placeholder="10-digit mobile" className="mt-2 w-full rounded-xl border-2 border-slate-200 px-4 py-3 outline-none focus:border-teal-600" /></label>{error && <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}<button disabled={busy} className="w-full rounded-xl bg-[#0F5132] px-4 py-4 font-bold text-white disabled:opacity-50">{busy ? 'Saving securely...' : 'Create my Patient ID'}</button></form></section></div></main>
+}
+
+export function LegacyPatientLogin() {
   const navigate = useNavigate()
   const [mode, setMode] = useState<'login' | 'signup'>('login')
   const [phone, setPhone] = useState('')
