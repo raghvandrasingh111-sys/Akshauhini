@@ -1,6 +1,25 @@
 import { supabase } from '../../lib/supabase'
 import type { ConsentRequest, MedicalDocument } from '../../types/database'
 
+export interface PatientIntakeRecord {
+  id: string
+  language: string
+  answers: Array<{ questionId: string; question: string; answer: string; timestamp?: string }>
+  clinical_summary: {
+    chiefComplaint?: string
+    hpi?: string
+    pastHistory?: string
+    medications?: string[]
+    allergies?: string[]
+    reviewOfSystems?: string
+    priorInvestigations?: string
+  } | null
+  red_flags: Array<{ symptom?: string; severity?: string; message?: string }>
+  is_emergency: boolean
+  history_mode: string
+  created_at: string
+}
+
 function requireSupabase() {
   if (!supabase) throw new Error('Supabase is not configured')
   return supabase
@@ -38,6 +57,17 @@ export async function getPatientDocuments(patientId: string) {
     .order('created_at', { ascending: false })
   if (error) throw error
   return (data ?? []) as MedicalDocument[]
+}
+
+export async function getPatientIntakes(patientId: string) {
+  const client = requireSupabase()
+  const { data, error } = await client
+    .from('kiosk_intakes')
+    .select('id, language, answers, clinical_summary, red_flags, is_emergency, history_mode, created_at')
+    .eq('patient_id', patientId)
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return (data ?? []) as PatientIntakeRecord[]
 }
 
 export async function uploadPatientDocument(params: {
