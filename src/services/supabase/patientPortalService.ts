@@ -4,7 +4,15 @@ import type { ConsentRequest, MedicalDocument } from '../../types/database'
 export interface PatientIntakeRecord {
   id: string
   language: string
-  answers: Array<{ questionId: string; question: string; answer: string; timestamp?: string }>
+  answers: Array<{
+    questionId?: string
+    question?: string
+    question_text?: string
+    answer?: string
+    value?: string
+    response?: string
+    timestamp?: string
+  }>
   clinical_summary: {
     chiefComplaint?: string
     hpi?: string
