@@ -14,7 +14,7 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
   }
 
   if (status === 'NOT_AUTHENTICATED') {
-    return <Navigate to="/doctor" replace />
+    return <Navigate to="/clinical-portal" replace />
   }
 
   if (status === 'DOCTOR_PROFILE_MISSING' || status === 'DATABASE_ERROR') {
