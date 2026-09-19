@@ -15,6 +15,7 @@ type TranslationKey =
   | 'welcome.chooseLanguage'
   | 'welcome.continue'
   | 'welcome.doctorPortal'
+  | 'welcome.patientPortal'
   | 'identity.title'
   | 'identity.abhaTab'
   | 'identity.manualTab'
@@ -81,6 +82,7 @@ const translations: Record<TranslationKey, Record<Language, string>> = {
   'welcome.chooseLanguage': { en: 'Choose Language', hi: 'भाषा चुनें', ta: 'மொழியைத் தேர்ந்தெடுக்கவும்', te: 'భాషను ఎంచుకోండి', bn: 'ভাষা বেছে নিন' },
   'welcome.continue': { en: 'Continue →', hi: 'आगे बढ़ें →', ta: 'தொடரவும் →', te: 'కొనసాగించండి →', bn: 'এগিয়ে যান →' },
   'welcome.doctorPortal': { en: 'Doctor Access Portal', hi: 'डॉक्टर एक्सेस पोर्टल', ta: 'மருத்துவர் அணுகல் போர்டல்', te: 'డాక్టర్ యాక్సెస్ పోర్టల్', bn: 'ডাক্তার অ্যাক্সেস পোর্টাল' },
+  'welcome.patientPortal': { en: 'Patient Login & Dashboard', hi: 'रोगी लॉगिन और डैशबोर्ड', ta: 'நோயாளர் உள்நுழைவு மற்றும் டாஷ்போர்டு', te: 'రోగి లాగిన్ మరియు డాష్‌బోర్డ్', bn: 'রোগী লগইন ও ড্যাশবোর্ড' },
   'identity.title': { en: 'Patient Identity & Verification', hi: 'रोगी पहचान सत्यापन', ta: 'நோயாளி அடையாளம் மற்றும் சரிபார்ப்பு', te: 'రోగి గుర్తింపు మరియు ధృవీకరణ', bn: 'রোগীর পরিচয় ও যাচাই' },
   'identity.abhaTab': { en: 'ABDM ABHA Verification', hi: 'ABHA से सत्यापन', ta: 'ABDM ABHA சரிபார்ப்பு', te: 'ABDM ABHA ధృవీకరణ', bn: 'ABDM ABHA যাচাই' },
   'identity.manualTab': { en: 'Manual Entry (No ABHA)', hi: 'मैन्युअल प्रविष्टि', ta: 'கைமுறை பதிவு', te: 'మాన్యువల్ నమోదు', bn: 'ম্যানুয়াল এন্ট্রি' },

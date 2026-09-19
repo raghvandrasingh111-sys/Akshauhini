@@ -74,6 +74,9 @@ export function WelcomeScreen() {
           </div>
 
           <div className="space-y-3">
+            <button onClick={() => navigate('/patient')} className="w-full py-3 rounded-xl border border-teal-300 bg-teal-50 text-teal-800 font-semibold hover:bg-teal-100 transition-colors">
+              {t(language, 'welcome.patientPortal')}
+            </button>
             <button onClick={() => setStep('identity')} className="kiosk-btn-primary w-full">
               {t(language, 'welcome.continue')}
             </button>

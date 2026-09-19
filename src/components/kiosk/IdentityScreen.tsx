@@ -34,6 +34,7 @@ import {
   type PatientRegistryRecord,
 } from '../../services/patientRegistryService'
 import type { DoctorAccessRequest } from '../../types'
+import { linkPatientAccount, signInPatient, signUpPatient } from '../../services/supabase/patientAuthService'
 
 export function IdentityScreen() {
   const { language, setIdentity, setStep } = useApp()
@@ -61,6 +62,9 @@ export function IdentityScreen() {
   const [patientRecord, setPatientRecord] = useState<PatientRegistryRecord | null>(null)
   const [accessRequests, setAccessRequests] = useState<DoctorAccessRequest[]>([])
   const [phoneError, setPhoneError] = useState('')
+  const [accountMode, setAccountMode] = useState<'signup' | 'login'>('signup')
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
 
   // Sandbox / Live settings modal
   const [showConfig, setShowConfig] = useState(false)
@@ -206,8 +210,23 @@ export function IdentityScreen() {
       setPhoneError('A valid phone number is required to create your Patient ID.')
       return
     }
+    if (password.length < 8) {
+      setPhoneError('Create a password with at least 8 characters.')
+      return
+    }
+    if (accountMode === 'signup' && password !== confirmPassword) {
+      setPhoneError('Passwords do not match.')
+      return
+    }
 
     try {
+      const authResult = accountMode === 'signup'
+        ? await signUpPatient(phone, password)
+        : await signInPatient(phone, password)
+      if (authResult.error) throw authResult.error
+      if (!authResult.data.session) {
+        throw new Error('Confirm the phone OTP sent by Supabase, then sign in again.')
+      }
       const patient = await registerOrLoginPatient({
         phone,
         name,
@@ -217,6 +236,7 @@ export function IdentityScreen() {
         abhaNumber: verifiedProfile?.healthIdNumber,
         abhaAddress: verifiedProfile?.healthId,
       })
+      await linkPatientAccount(authResult.data.session, patient.patientId)
 
       setIdentity({
         patientId: patient.patientId,
@@ -291,6 +311,20 @@ export function IdentityScreen() {
             </div>
             <div>
               <h2 className="text-2xl font-bold text-slate-800">
+            {tab === 'abha' && (
+              <div className="mb-6 rounded-2xl border-2 border-teal-200 bg-teal-50/60 p-5 space-y-3">
+                <p className="text-sm font-bold text-slate-900">Protect this patient account</p>
+                <div className="grid grid-cols-2 gap-2 rounded-xl bg-white/70 p-1">
+                  <button type="button" onClick={() => setAccountMode('signup')} className={`rounded-lg py-2 text-xs font-bold ${accountMode === 'signup' ? 'bg-white text-teal-800 shadow-sm' : 'text-slate-500'}`}>Create account</button>
+                  <button type="button" onClick={() => setAccountMode('login')} className={`rounded-lg py-2 text-xs font-bold ${accountMode === 'login' ? 'bg-white text-teal-800 shadow-sm' : 'text-slate-500'}`}>Existing patient login</button>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <input type="password" value={password} onChange={event => setPassword(event.target.value)} placeholder="Password (8+ characters)" className="w-full rounded-xl border-2 border-teal-200 bg-white px-4 py-3 text-sm focus:border-teal-600 focus:outline-none" />
+                  {accountMode === 'signup' && <input type="password" value={confirmPassword} onChange={event => setConfirmPassword(event.target.value)} placeholder="Confirm password" className="w-full rounded-xl border-2 border-teal-200 bg-white px-4 py-3 text-sm focus:border-teal-600 focus:outline-none" />}
+                </div>
+              </div>
+            )}
+
                 {t(language, 'identity.title')}
               </h2>
               <div className="flex items-center gap-2 text-xs font-semibold text-emerald-700 mt-0.5">
@@ -367,6 +401,14 @@ export function IdentityScreen() {
               </button>
             </div>
             {phoneError && <p className="text-xs text-rose-600 font-medium">{phoneError}</p>}
+            <div className="grid grid-cols-2 gap-2 rounded-xl bg-slate-100 p-1">
+              <button type="button" onClick={() => setAccountMode('signup')} className={`rounded-lg py-2 text-xs font-bold ${accountMode === 'signup' ? 'bg-white text-teal-800 shadow-sm' : 'text-slate-500'}`}>Create account</button>
+              <button type="button" onClick={() => setAccountMode('login')} className={`rounded-lg py-2 text-xs font-bold ${accountMode === 'login' ? 'bg-white text-teal-800 shadow-sm' : 'text-slate-500'}`}>Existing patient login</button>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <input type="password" value={password} onChange={event => setPassword(event.target.value)} placeholder="Password (8+ characters)" className="w-full rounded-xl border-2 border-teal-200 bg-white px-4 py-3 text-sm focus:border-teal-600 focus:outline-none" />
+              {accountMode === 'signup' && <input type="password" value={confirmPassword} onChange={event => setConfirmPassword(event.target.value)} placeholder="Confirm password" className="w-full rounded-xl border-2 border-teal-200 bg-white px-4 py-3 text-sm focus:border-teal-600 focus:outline-none" />}
+            </div>
             {patientRecord && (
               <div className="p-3 rounded-xl bg-white border border-emerald-200 text-sm">
                 <p className="font-semibold text-emerald-800">Existing patient found: {patientRecord.name}</p>
