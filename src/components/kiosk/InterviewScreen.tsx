@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Mic, Send, ChevronRight } from 'lucide-react'
+import { Mic, Send, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useApp } from '../../context/AppContext'
 import { ProgressBar } from '../ui/ProgressBar'
 import { VoiceIndicator } from '../ui/VoiceIndicator'
@@ -21,6 +21,7 @@ export function InterviewScreen() {
     toggleVoice,
     setListening,
     submitAnswer,
+    previousQuestion,
     getQuestions,
     currentQuestionIndex,
     redFlags,
@@ -371,13 +372,23 @@ export function InterviewScreen() {
           )}
         </div>
 
-        <button
-          onClick={() => setStep('documents')}
-          className="flex items-center gap-2 mx-auto mt-6 text-medikiosk-primary font-medium hover:underline"
-        >
-          {t(language, 'interview.skip')}
-          <ChevronRight className="w-4 h-4" />
-        </button>
+        <div className="flex items-center justify-between gap-4 mt-6">
+          <button
+            onClick={previousQuestion}
+            disabled={currentQuestionIndex === 0}
+            className="flex items-center gap-2 text-medikiosk-primary font-medium hover:underline disabled:opacity-40 disabled:no-underline"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            {t(language, 'back')}
+          </button>
+          <button
+            onClick={() => setStep('documents')}
+            className="flex items-center gap-2 text-medikiosk-primary font-medium hover:underline"
+          >
+            {t(language, 'interview.skip')}
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
       </div>
     </div>
   )

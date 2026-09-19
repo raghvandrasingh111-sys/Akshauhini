@@ -50,6 +50,7 @@ type Action =
   | { type: 'GRANT_CONSENT' }
   | { type: 'ADD_ANSWER'; answer: InterviewAnswer }
   | { type: 'NEXT_QUESTION' }
+  | { type: 'PREVIOUS_QUESTION' }
   | { type: 'ADD_DOCUMENT'; document: ExtractedDocument }
   | { type: 'SET_LISTENING'; listening: boolean }
   | { type: 'TOGGLE_VOICE' }
@@ -72,7 +73,14 @@ function reducer(state: AppState, action: Action): AppState {
     case 'GRANT_CONSENT':
       return { ...state, consentGranted: true }
     case 'ADD_ANSWER': {
-      const answers = [...state.interviewAnswers, action.answer]
+      const existingIndex = state.interviewAnswers.findIndex(
+        (answer) => answer.questionId === action.answer.questionId
+      )
+      const answers = existingIndex === -1
+        ? [...state.interviewAnswers, action.answer]
+        : state.interviewAnswers.map((answer, index) =>
+            index === existingIndex ? action.answer : answer
+          )
       const flags = detectRedFlags(answers)
       return {
         ...state,
@@ -83,6 +91,11 @@ function reducer(state: AppState, action: Action): AppState {
     }
     case 'NEXT_QUESTION':
       return { ...state, currentQuestionIndex: state.currentQuestionIndex + 1 }
+    case 'PREVIOUS_QUESTION':
+      return {
+        ...state,
+        currentQuestionIndex: Math.max(0, state.currentQuestionIndex - 1),
+      }
     case 'ADD_DOCUMENT':
       return { ...state, documents: [...state.documents, action.document] }
     case 'SET_LISTENING':
@@ -136,6 +149,7 @@ interface AppContextValue extends AppState {
   grantConsent: () => void
   submitAnswer: (questionId: string, question: string, answer: string) => void
   nextQuestion: () => void
+  previousQuestion: () => void
   addDocument: (doc: ExtractedDocument) => void
   finalizeSummary: () => Promise<void>
   refreshGeminiAnalysis: () => Promise<void>
@@ -175,6 +189,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const setIdentity = useCallback((identity: PatientIdentity) => dispatch({ type: 'SET_IDENTITY', identity }), [])
   const grantConsent = useCallback(() => dispatch({ type: 'GRANT_CONSENT' }), [])
   const nextQuestion = useCallback(() => dispatch({ type: 'NEXT_QUESTION' }), [])
+  const previousQuestion = useCallback(() => dispatch({ type: 'PREVIOUS_QUESTION' }), [])
   const toggleVoice = useCallback(() => dispatch({ type: 'TOGGLE_VOICE' }), [])
   const setListening = useCallback((listening: boolean) => dispatch({ type: 'SET_LISTENING', listening }), [])
   const reset = useCallback(() => dispatch({ type: 'RESET' }), [])
@@ -351,6 +366,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     grantConsent,
     submitAnswer,
     nextQuestion,
+    previousQuestion,
     addDocument,
     finalizeSummary,
     refreshGeminiAnalysis,
