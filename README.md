@@ -19,6 +19,30 @@ Sanjeevani enables a modern, hospital-grade workflow that moves patients from:
 
 without dropping the doctor into fragmented or low-trust systems.
 
+## Google Patient Login Setup
+
+The patient portal uses Supabase Google OAuth. The error `redirect_uri_mismatch` is fixed in provider configuration, not by changing the patient form.
+
+1. In Google Cloud Console, open the OAuth 2.0 Web Client used by Supabase.
+2. Add this exact **Authorized redirect URI**:
+
+	```text
+	https://mswfnhxtmahvckgjllqt.supabase.co/auth/v1/callback
+	```
+
+3. In Supabase Dashboard, open **Authentication → Providers → Google**, enable Google, and paste the same Google OAuth client ID and secret.
+4. In Supabase **Authentication → URL Configuration**, add the app URLs:
+
+	```text
+	http://localhost:5173/patient
+	https://YOUR_PRODUCTION_DOMAIN/patient
+	```
+
+5. Set `VITE_APP_URL` to the matching app origin, for example `http://localhost:5173` during development.
+6. On Google Cloud's OAuth consent screen, add the test Gmail accounts under **Test users** while the app is in testing mode.
+
+The Google callback must be the Supabase callback above. The app URL is only the final destination after Supabase completes authentication.
+
 ## Core Design Principles
 
 - Clinical, readable, and information-dense interface

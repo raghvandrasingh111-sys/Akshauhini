@@ -2,7 +2,7 @@ import { FormEvent, useEffect, useState } from 'react'
 import { ArrowUpRight, Check, FileImage, FileText, Fingerprint, HeartPulse, LockKeyhole, LogOut, ShieldCheck, UploadCloud } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { usePatientAuth } from '../context/PatientAuthContext'
-import { isValidPatientPhone, registerGooglePatient, signInPatientWithGoogle, signInPatient, signUpPatient } from '../services/supabase/patientAuthService'
+import { isValidPatientPhone, registerGooglePatient, registerManualPatient, signInPatientWithGoogle, signInPatient, signUpPatient } from '../services/supabase/patientAuthService'
 import { getPatientConsentRequests, getPatientDocuments, respondToPatientConsent, uploadPatientDocument } from '../services/supabase/patientPortalService'
 import type { ConsentRequest, MedicalDocument } from '../types/database'
 import { abhaSdkService, type AbhaAuthMethod } from '../services/abhaSdkService'
@@ -16,19 +16,45 @@ export function PatientPortalPage() {
 function PatientLogin() {
   const { session } = usePatientAuth()
   if (session) return <PatientProfileSetup />
-  return <GooglePatientLogin />
+  return <PatientEntry />
 }
 
-function GooglePatientLogin() {
+function PatientEntry() {
   const navigate = useNavigate()
+  const [method, setMethod] = useState<'google' | 'manual'>('google')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [message, setMessage] = useState('')
+  const [manualMode, setManualMode] = useState<'login' | 'signup'>('login')
+  const [aadhaar, setAadhaar] = useState('')
+  const [fullName, setFullName] = useState('')
+  const [age, setAge] = useState('')
+  const [gender, setGender] = useState<'male' | 'female' | 'other'>('male')
+  const [phone, setPhone] = useState('')
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const login = async () => {
     setBusy(true)
     const result = await signInPatientWithGoogle()
     if (result.error) { setError(result.error.message); setBusy(false) }
   }
-  return <main className="min-h-screen bg-[#EAF4F0] px-4 py-10 text-slate-900"><div className="mx-auto max-w-md"><div className="mb-8 text-center"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#0F5132] text-white shadow-lg"><HeartPulse /></div><p className="mt-4 text-xs font-bold uppercase tracking-[0.22em] text-teal-700">Sanjeevani patient space</p><h1 className="mt-2 text-3xl font-black">Your health, your control.</h1><p className="mt-2 text-sm text-slate-500">Sign in once with Google. Your Aadhaar becomes your private Patient ID.</p></div><section className="rounded-[2rem] bg-white p-7 shadow-xl shadow-teal-900/10"><div className="flex items-center gap-3 rounded-2xl bg-teal-50 p-4"><ShieldCheck className="h-6 w-6 text-teal-700" /><p className="text-sm font-semibold text-teal-900">Secure Google account, private clinical records, patient-controlled approval.</p></div>{error && <p className="mt-4 rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}<button onClick={() => void login()} disabled={busy} className="mt-6 flex w-full items-center justify-center gap-3 rounded-xl bg-[#0F5132] px-4 py-4 font-bold text-white disabled:opacity-50"><span className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-sm font-black text-[#0F5132]">G</span>{busy ? 'Opening Google...' : 'Continue with Google'}</button><button onClick={() => navigate('/')} className="mt-6 w-full text-sm text-slate-500">Back to kiosk</button></section></div></main>
+  const manualSubmit = async (event: FormEvent) => {
+    event.preventDefault(); setError(''); setMessage('')
+    if (!isValidPatientPhone(phone)) return setError('Enter a valid 10-digit phone number.')
+    if (password.length < 8) return setError('Password must be at least 8 characters.')
+    if (manualMode === 'signup' && !/^\d{12}$/.test(aadhaar)) return setError('Enter a valid 12-digit Aadhaar number.')
+    if (manualMode === 'signup' && (!fullName.trim() || !age || Number(age) < 1 || Number(age) > 120)) return setError('Enter your name and a valid age.')
+    if (manualMode === 'signup' && password !== confirmPassword) return setError('Passwords do not match.')
+    setBusy(true)
+    try {
+      const authResult = manualMode === 'login' ? await signInPatient(phone, password) : await signUpPatient(phone, password)
+      if (authResult.error) throw authResult.error
+      if (!authResult.data.session) { setMessage('Account created. Confirm the phone OTP, then sign in again.'); setBusy(false); return }
+      if (manualMode === 'signup') await registerManualPatient({ aadhaarNumber: aadhaar, fullName: fullName.trim(), age: Number(age), gender, phone })
+      window.location.reload()
+    } catch (manualError) { setError(manualError instanceof Error ? manualError.message : 'Manual account action failed.'); setBusy(false) }
+  }
+  return <main className="min-h-screen bg-[#EAF4F0] px-4 py-10 text-slate-900"><div className="mx-auto max-w-md"><div className="mb-8 text-center"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#0F5132] text-white shadow-lg"><HeartPulse /></div><p className="mt-4 text-xs font-bold uppercase tracking-[0.22em] text-teal-700">Sanjeevani patient space</p><h1 className="mt-2 text-3xl font-black">Your health, your control.</h1><p className="mt-2 text-sm text-slate-500">Choose Google fast login or use a protected manual account.</p></div><section className="rounded-[2rem] bg-white p-7 shadow-xl shadow-teal-900/10"><div className="grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1"><button onClick={() => { setMethod('google'); setError('') }} className={`rounded-lg py-2.5 text-sm font-bold ${method === 'google' ? 'bg-white text-teal-800 shadow-sm' : 'text-slate-500'}`}>Google login</button><button onClick={() => { setMethod('manual'); setError('') }} className={`rounded-lg py-2.5 text-sm font-bold ${method === 'manual' ? 'bg-white text-teal-800 shadow-sm' : 'text-slate-500'}`}>Manual login</button></div>{method === 'google' ? <><div className="mt-5 flex items-center gap-3 rounded-2xl bg-teal-50 p-4"><ShieldCheck className="h-6 w-6 text-teal-700" /><p className="text-sm font-semibold text-teal-900">Secure Google account, private clinical records, and patient-controlled approval.</p></div><button onClick={() => void login()} disabled={busy} className="mt-6 flex w-full items-center justify-center gap-3 rounded-xl bg-[#0F5132] px-4 py-4 font-bold text-white disabled:opacity-50"><span className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-sm font-black text-[#0F5132]">G</span>{busy ? 'Opening Google...' : 'Continue with Google'}</button></> : <><div className="mt-5 grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1"><button onClick={() => setManualMode('login')} className={`rounded-lg py-2 text-xs font-bold ${manualMode === 'login' ? 'bg-white text-teal-800 shadow-sm' : 'text-slate-500'}`}>Sign in</button><button onClick={() => setManualMode('signup')} className={`rounded-lg py-2 text-xs font-bold ${manualMode === 'signup' ? 'bg-white text-teal-800 shadow-sm' : 'text-slate-500'}`}>Sign up</button></div><form onSubmit={manualSubmit} className="mt-5 space-y-3"><label className="block text-xs font-bold uppercase tracking-wider text-slate-500">Phone number<input value={phone} onChange={e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))} inputMode="numeric" className="mt-2 w-full rounded-xl border-2 border-slate-200 px-4 py-3 outline-none focus:border-teal-600" /></label>{manualMode === 'signup' && <><label className="block text-xs font-bold uppercase tracking-wider text-slate-500">Full name<input value={fullName} onChange={e => setFullName(e.target.value)} className="mt-2 w-full rounded-xl border-2 border-slate-200 px-4 py-3 outline-none focus:border-teal-600" /></label><label className="block text-xs font-bold uppercase tracking-wider text-slate-500">Aadhaar number<input value={aadhaar} onChange={e => setAadhaar(e.target.value.replace(/\D/g, '').slice(0, 12))} inputMode="numeric" className="mt-2 w-full rounded-xl border-2 border-teal-200 px-4 py-3 font-mono outline-none focus:border-teal-600" /></label><div className="grid grid-cols-2 gap-3"><label className="block text-xs font-bold uppercase tracking-wider text-slate-500">Age<input value={age} onChange={e => setAge(e.target.value.replace(/\D/g, '').slice(0, 3))} inputMode="numeric" className="mt-2 w-full rounded-xl border-2 border-slate-200 px-4 py-3 outline-none focus:border-teal-600" /></label><label className="block text-xs font-bold uppercase tracking-wider text-slate-500">Sex<select value={gender} onChange={e => setGender(e.target.value as typeof gender)} className="mt-2 w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3"><option value="male">Male</option><option value="female">Female</option><option value="other">Other</option></select></label></div></>}<label className="block text-xs font-bold uppercase tracking-wider text-slate-500">Password<input type="password" value={password} onChange={e => setPassword(e.target.value)} className="mt-2 w-full rounded-xl border-2 border-slate-200 px-4 py-3 outline-none focus:border-teal-600" /></label>{manualMode === 'signup' && <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="Confirm password" className="w-full rounded-xl border-2 border-slate-200 px-4 py-3 outline-none focus:border-teal-600" />}{error && <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}{message && <p className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-700">{message}</p>}<button disabled={busy} className="w-full rounded-xl bg-[#0F5132] px-4 py-3.5 font-bold text-white disabled:opacity-50">{busy ? 'Please wait...' : manualMode === 'login' ? 'Sign in manually' : 'Create patient account'}</button></form></> }<button onClick={() => navigate('/')} className="mt-6 w-full text-sm text-slate-500">Back to kiosk</button></section></div></main>
 }
 
 function PatientProfileSetup() {

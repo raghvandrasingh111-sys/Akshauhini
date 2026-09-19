@@ -17,9 +17,10 @@ export async function signUpPatient(phone: string, password: string) {
 
 export async function signInPatientWithGoogle() {
   if (!supabase) return { data: { provider: null, url: null }, error: new Error('Supabase is not configured') }
+  const appUrl = (import.meta.env.VITE_APP_URL || window.location.origin).replace(/\/$/, '')
   return supabase.auth.signInWithOAuth({
     provider: 'google',
-    options: { redirectTo: `${window.location.origin}/patient` },
+    options: { redirectTo: `${appUrl}/patient` },
   })
 }
 
@@ -39,6 +40,26 @@ export async function registerGooglePatient(input: {
     p_gender: input.gender,
     p_phone: input.phone,
     p_email: input.email,
+    p_hospital_id: import.meta.env.VITE_DEFAULT_HOSPITAL_ID || null,
+  })
+  if (error) throw error
+  return data
+}
+
+export async function registerManualPatient(input: {
+  aadhaarNumber: string
+  fullName: string
+  age: number
+  gender: 'male' | 'female' | 'other'
+  phone: string
+}) {
+  if (!supabase) throw new Error('Supabase is not configured')
+  const { data, error } = await supabase.rpc('register_manual_patient', {
+    p_aadhaar_number: input.aadhaarNumber,
+    p_full_name: input.fullName,
+    p_age: input.age,
+    p_gender: input.gender,
+    p_phone: input.phone,
     p_hospital_id: import.meta.env.VITE_DEFAULT_HOSPITAL_ID || null,
   })
   if (error) throw error
