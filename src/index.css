@@ -1,0 +1,54 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    @apply antialiased;
+  }
+
+  body {
+    @apply bg-slate-50 text-slate-900 font-sans;
+  }
+}
+
+@layer components {
+  .kiosk-btn {
+    @apply min-h-[56px] min-w-[120px] px-6 py-4 rounded-2xl font-semibold text-lg
+           transition-all duration-200 active:scale-[0.98] disabled:opacity-50
+           disabled:cursor-not-allowed touch-manipulation;
+  }
+
+  .kiosk-btn-primary {
+    @apply min-h-[56px] min-w-[120px] px-6 py-4 rounded-2xl font-semibold text-lg
+           transition-all duration-200 active:scale-[0.98] disabled:opacity-50
+           disabled:cursor-not-allowed touch-manipulation
+           bg-medikiosk-primary text-white hover:bg-medikiosk-primary-dark shadow-kiosk;
+  }
+
+  .kiosk-btn-secondary {
+    @apply min-h-[56px] min-w-[120px] px-6 py-4 rounded-2xl font-semibold text-lg
+           transition-all duration-200 active:scale-[0.98] disabled:opacity-50
+           disabled:cursor-not-allowed touch-manipulation
+           bg-white text-medikiosk-primary border-2 border-medikiosk-primary
+           hover:bg-medikiosk-surface;
+  }
+
+  .kiosk-card {
+    @apply bg-white rounded-3xl shadow-card border border-medikiosk-border p-6 md:p-8;
+  }
+
+  .touch-option {
+    @apply flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border-2
+           border-medikiosk-border bg-white hover:border-medikiosk-primary hover:bg-medikiosk-surface
+           transition-all cursor-pointer touch-manipulation min-h-[120px];
+  }
+
+  .touch-option-selected {
+    @apply border-medikiosk-primary bg-medikiosk-surface ring-2 ring-medikiosk-primary/30;
+  }
+
+  .emergency-pulse {
+    @apply animate-pulse-slow bg-medikiosk-emergency text-white;
+  }
+}
