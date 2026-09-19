@@ -4,6 +4,7 @@ Sanjeevani is an AI-assisted digital patient intake and physician clinical dashb
 
 The physician-facing interface is not designed to replace clinical judgment. Instead, it supports doctors by organizing patient information, flagging urgent findings, and keeping the final medical decision in the physician's control.
 It is also a first-mile clinical intake kiosk powered by Gemini AI, ABDM ABHA identity verification, and FHIR R4 interoperability. Patients can narrate their history in local languages via voice or touch, scan paper records, and deliver a physician-ready summary before consultation.
+It offloads structured history-taking from overburdened OPD physicians and delivers a physician-ready diagnostic summary before consultation.
 
 ## Product Purpose
 
