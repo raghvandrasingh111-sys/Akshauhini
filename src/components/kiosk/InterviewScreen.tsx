@@ -4,6 +4,7 @@ import { useApp } from '../../context/AppContext'
 import { ProgressBar } from '../ui/ProgressBar'
 import { VoiceIndicator } from '../ui/VoiceIndicator'
 import { EmergencyAlert } from './EmergencyAlert'
+import { getOptionText, getQuestionSubtext, getQuestionText, LANGUAGE_LOCALES, t } from '../../i18n'
 
 const DEMO_PHRASES: Record<string, string> = {
   cc_main: '3 din se severe chest pain aur saans phul rahi hai, thanda paseena aa raha hai',
@@ -54,7 +55,7 @@ export function InterviewScreen() {
       if (!voiceEnabled || !('speechSynthesis' in window)) return
       speechSynthesis.cancel()
       const utterance = new SpeechSynthesisUtterance(text)
-      utterance.lang = isHi ? 'hi-IN' : 'en-IN'
+      utterance.lang = LANGUAGE_LOCALES[language]
       speechSynthesis.speak(utterance)
     },
     [voiceEnabled, isHi]
@@ -62,7 +63,7 @@ export function InterviewScreen() {
 
   useEffect(() => {
     if (question) {
-      speak(isHi ? question.text.hi : question.text.en)
+      speak(getQuestionText(question, language))
     }
   }, [question, isHi, speak])
 
@@ -73,7 +74,7 @@ export function InterviewScreen() {
 
     submitAnswer(
       question.id,
-      isHi ? question.text.hi : question.text.en,
+      getQuestionText(question, language),
       answer
     )
     setInput('')
@@ -102,14 +103,14 @@ export function InterviewScreen() {
     // Format human-friendly string
     const labels = selectedMulti.map((val) => {
       const opt = question.options?.find((o) => o.value === val)
-      return opt ? (isHi ? opt.hi : opt.en) : val
+      return opt ? getOptionText(question, val, language) : val
     })
     handleSubmit(labels.join(', '))
   }
 
   const startVoice = () => {
     if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
-      alert(isHi ? 'आवाज़ पहचान उपलब्ध नहीं — टच मोड उपयोग करें' : 'Voice not available — use touch mode')
+      alert(t(language, 'interview.voiceUnavailable'))
       return
     }
     const SpeechRecognition =
@@ -119,7 +120,7 @@ export function InterviewScreen() {
     if (!SpeechRecognition) return
 
     const recognition = new SpeechRecognition()
-    recognition.lang = isHi ? 'hi-IN' : 'en-IN'
+    recognition.lang = LANGUAGE_LOCALES[language]
     recognition.interimResults = false
 
     setListening(true)
@@ -158,7 +159,7 @@ export function InterviewScreen() {
 
     questions.forEach((q) => {
       const ans = demoAnswers[q.id] || (q.options ? q.options[0].value : 'None')
-      submitAnswer(q.id, isHi ? q.text.hi : q.text.en, ans)
+      submitAnswer(q.id, getQuestionText(q, language), ans)
     })
     setStep('documents')
   }
@@ -199,19 +200,19 @@ export function InterviewScreen() {
         <ProgressBar
           current={currentQuestionIndex + 1}
           total={questions.length}
-          label={isHi ? 'साक्षात्कार प्रगति' : 'Interview Progress'}
+          label={t(language, 'interview.progress')}
         />
 
         <div className="kiosk-card mt-6 animate-slide-up">
           <p className="text-sm text-medikiosk-primary font-semibold uppercase mb-1">
-            {isHi ? `प्रश्न ${currentQuestionIndex + 1}/${questions.length}` : `Question ${currentQuestionIndex + 1}/${questions.length}`}
+            {t(language, 'interview.question')} {currentQuestionIndex + 1}/{questions.length}
           </p>
           <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mb-2 leading-relaxed">
-            {isHi ? question.text.hi : question.text.en}
+            {getQuestionText(question, language)}
           </h2>
           {question.subtext && (
             <p className="text-sm text-slate-500 mb-6 font-medium">
-              {isHi ? question.subtext.hi : question.subtext.en}
+              {getQuestionSubtext(question, language)}
             </p>
           )}
 
@@ -224,7 +225,7 @@ export function InterviewScreen() {
                   onClick={() => handleSubmit(opt.value)}
                   className="touch-option text-left !items-start hover:border-medikiosk-primary hover:bg-medikiosk-surface transition-all"
                 >
-                  <span className="font-semibold text-lg text-slate-800">{isHi ? opt.hi : opt.en}</span>
+                  <span className="font-semibold text-lg text-slate-800">{getOptionText(question, opt.value, language)}</span>
                 </button>
               ))}
             </div>
@@ -247,7 +248,7 @@ export function InterviewScreen() {
                           : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
                       }`}
                     >
-                      <span>{isHi ? opt.hi : opt.en}</span>
+                      <span>{getOptionText(question, opt.value, language)}</span>
                       <span
                         className={`w-6 h-6 rounded-md flex items-center justify-center border text-sm font-bold ${
                           isSelected
@@ -267,7 +268,7 @@ export function InterviewScreen() {
                 disabled={selectedMulti.length === 0}
                 className="kiosk-btn-primary w-full py-4 text-lg font-bold flex items-center justify-center gap-2"
               >
-                <span>{isHi ? 'चुनें और आगे बढ़ें' : 'Confirm & Continue'}</span>
+                <span>{t(language, 'interview.confirm')}</span>
                 <ChevronRight className="w-5 h-5" />
               </button>
             </div>
@@ -277,10 +278,10 @@ export function InterviewScreen() {
           {question.type === 'yesno' && (
             <div className="grid grid-cols-2 gap-4 mb-6">
               <button onClick={() => handleSubmit('yes')} className="kiosk-btn-primary py-4 text-xl">
-                {isHi ? 'हाँ' : 'Yes'}
+                {t(language, 'interview.yes')}
               </button>
               <button onClick={() => handleSubmit('no')} className="kiosk-btn-secondary py-4 text-xl">
-                {isHi ? 'नहीं' : 'No'}
+                {t(language, 'interview.no')}
               </button>
             </div>
           )}
@@ -322,7 +323,7 @@ export function InterviewScreen() {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
-                  placeholder={isHi ? 'यहाँ टाइप करें या बोलें…' : 'Type or speak here…'}
+                  placeholder={t(language, 'interview.type')}
                   className="flex-1 px-4 py-4 rounded-xl border-2 border-medikiosk-border focus:border-medikiosk-primary focus:outline-none text-lg"
                 />
                 {voiceEnabled && (
@@ -374,7 +375,7 @@ export function InterviewScreen() {
           onClick={() => setStep('documents')}
           className="flex items-center gap-2 mx-auto mt-6 text-medikiosk-primary font-medium hover:underline"
         >
-          {isHi ? 'दस्तावेज़ स्कैन पर जाएं' : 'Skip to Document Scan'}
+          {t(language, 'interview.skip')}
           <ChevronRight className="w-4 h-4" />
         </button>
       </div>

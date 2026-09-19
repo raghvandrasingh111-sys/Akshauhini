@@ -1,6 +1,7 @@
 import { HeartPulse, Shield, Languages } from 'lucide-react'
 import { useApp } from '../../context/AppContext'
 import type { Language } from '../../types'
+import { t } from '../../i18n'
 
 const LANGUAGES: { code: Language; label: string; native: string }[] = [
   { code: 'hi', label: 'Hindi', native: 'हिन्दी' },
@@ -12,7 +13,6 @@ const LANGUAGES: { code: Language; label: string; native: string }[] = [
 
 export function WelcomeScreen() {
   const { language, setLanguage, setStep } = useApp()
-  const isHi = language === 'hi'
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-medikiosk-surface via-white to-teal-50 flex flex-col">
@@ -29,7 +29,7 @@ export function WelcomeScreen() {
               </span>
             </h1>
             <p className="text-xs text-medikiosk-muted font-medium">
-              {isHi ? 'AI-संचालित डिजिटल क्लिनिकल इनटेक' : 'AI-Powered Digital Clinical Intake Platform'}
+              {t(language, 'brand.tagline')}
             </p>
           </div>
         </div>
@@ -46,18 +46,16 @@ export function WelcomeScreen() {
               Ministry of Ayush · AIIA
             </p>
             <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-3">
-              {isHi ? 'स्वागत है' : 'Welcome'}
+              {t(language, 'welcome.title')}
             </h2>
             <p className="text-lg text-medikiosk-muted">
-              {isHi
-                ? 'अपनी भाषा चुनें और शुरू करें'
-                : 'Select your language to begin intake'}
+              {t(language, 'welcome.subtitle')}
             </p>
           </div>
 
           <div className="flex items-center gap-2 justify-center mb-4 text-medikiosk-muted">
             <Languages className="w-5 h-5" />
-            <span className="font-medium">{isHi ? 'भाषा चुनें' : 'Choose Language'}</span>
+            <span className="font-medium">{t(language, 'welcome.chooseLanguage')}</span>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-8">
@@ -74,7 +72,7 @@ export function WelcomeScreen() {
           </div>
 
           <button onClick={() => setStep('identity')} className="kiosk-btn-primary w-full">
-            {isHi ? 'आगे बढ़ें →' : 'Continue →'}
+            {t(language, 'welcome.continue')}
           </button>
         </div>
       </main>

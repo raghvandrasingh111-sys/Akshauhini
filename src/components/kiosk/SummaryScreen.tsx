@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import { useApp } from '../../context/AppContext'
 import { saveIntakeToSupabase, type SyncStatus } from '../../services/supabaseService'
+import { LANGUAGE_LOCALES, t } from '../../i18n'
 
 export function SummaryScreen() {
   const { language, identity, summary, reset, isEmergency, geminiLoading, interviewAnswers, redFlags, historyMode } = useApp()
@@ -31,7 +32,7 @@ export function SummaryScreen() {
         ? `आपकी जानकारी सफलतापूर्वक दर्ज हो गई। मुख्य शिकायत: ${summary.chiefComplaint}. ${summary.geminiAnalysis?.clinicalImpression || ''}`
         : `Your information has been recorded. Chief complaint: ${summary.chiefComplaint}. ${summary.geminiAnalysis?.clinicalImpression || ''}`
       const utterance = new SpeechSynthesisUtterance(text)
-      utterance.lang = isHi ? 'hi-IN' : 'en-IN'
+      utterance.lang = LANGUAGE_LOCALES[language]
       speechSynthesis.speak(utterance)
     }
   }
@@ -74,7 +75,7 @@ export function SummaryScreen() {
             <UserCheck className="w-12 h-12 text-white" />
           </div>
           <h2 className="text-3xl font-bold text-slate-900 mb-2">
-            {isHi ? 'धन्यवाद! 🙏' : 'Thank You! 🙏'}
+            {t(language, 'summary.thankYou')} 🙏
           </h2>
           <p className="text-lg text-slate-600 mb-1">
             {identity?.name && <span className="font-semibold text-slate-800">{identity.name}</span>}
@@ -123,7 +124,7 @@ export function SummaryScreen() {
               className="kiosk-btn-primary w-full flex items-center justify-center gap-2"
             >
               <RefreshCw className="w-5 h-5" />
-              {isHi ? 'नया रोगी शुरू करें' : 'Start New Patient'}
+              {t(language, 'summary.newPatient')}
             </button>
             <p className="text-xs text-slate-400">
               {isHi ? '(8 सेकंड में स्वतः रीसेट हो जाएगा)' : '(Auto-resets in 8 seconds)'}
@@ -144,10 +145,10 @@ export function SummaryScreen() {
           <CheckCircle2 className="w-10 h-10 text-medikiosk-accent" />
           <div>
             <h2 className="text-2xl font-bold">
-              {isHi ? 'इनटेक पूर्ण' : 'Intake Complete'}
+              {t(language, 'summary.complete')}
             </h2>
             <p className="text-medikiosk-muted">
-              {isHi ? 'डॉक्टर को सारांश भेज दिया गया' : 'Summary sent to physician dashboard'}
+              {t(language, 'summary.sent')}
             </p>
           </div>
         </div>
@@ -189,7 +190,7 @@ export function SummaryScreen() {
           <div className="mb-6 p-4 bg-medikiosk-emergency-light border-2 border-medikiosk-emergency rounded-xl flex items-center gap-3">
             <AlertTriangle className="w-6 h-6 text-medikiosk-emergency" />
             <p className="font-bold text-medikiosk-emergency">
-              {isHi ? 'आपातकालीन ट्राइएज में भेजा गया' : 'Routed to Emergency Triage'}
+              {t(language, 'summary.emergency')}
             </p>
           </div>
         )}
@@ -350,14 +351,14 @@ export function SummaryScreen() {
         <div className="flex flex-col gap-3">
           <button onClick={speakSummary} className="kiosk-btn-secondary w-full flex items-center justify-center gap-2">
             <Volume2 className="w-5 h-5" />
-            {isHi ? 'ऑडियो पुष्टि सुनें' : 'Listen to Audio Confirmation'}
+            {t(language, 'summary.listen')}
           </button>
           <button onClick={handleComplete} className="kiosk-btn-primary w-full flex items-center justify-center gap-2">
             <Send className="w-5 h-5" />
-            {isHi ? 'पूर्ण — प्रतीक्षा क्षेत्र में जाएं' : 'Done — Proceed to Waiting Area'}
+            {t(language, 'summary.done')}
           </button>
           <button onClick={reset} className="text-medikiosk-muted py-2">
-            {isHi ? 'नया रोगी शुरू करें' : 'Start New Patient'}
+            {t(language, 'summary.newPatient')}
           </button>
         </div>
       </div>

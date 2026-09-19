@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Shield, Volume2, CheckCircle2 } from 'lucide-react'
 import { useApp } from '../../context/AppContext'
+import { getConsentText, LANGUAGE_LOCALES, t } from '../../i18n'
 
 const BASE_CONSENT_ITEMS = [
   {
@@ -46,7 +47,7 @@ export function ConsentScreen() {
         ? 'संजीवनी (Sanjeevani) आपका स्वास्थ्य इतिहास सुरक्षित रूप से एकत्र करेगा। यह निदान नहीं है।'
         : 'Sanjeevani will securely collect your health history. This is not a diagnosis.'
       const utterance = new SpeechSynthesisUtterance(text)
-      utterance.lang = isHi ? 'hi-IN' : 'en-IN'
+      utterance.lang = LANGUAGE_LOCALES[language]
       speechSynthesis.speak(utterance)
     }
   }
@@ -62,7 +63,7 @@ export function ConsentScreen() {
         <div className="flex items-center gap-3 mb-2">
           <Shield className="w-8 h-8 text-medikiosk-primary" />
           <h2 className="text-2xl font-bold">
-            {isHi ? 'सहमति और गोपनीयता' : 'Consent & Privacy'}
+            {t(language, 'consent.title')}
           </h2>
         </div>
         <p className="text-medikiosk-muted mb-4">
@@ -99,12 +100,12 @@ export function ConsentScreen() {
           className="flex items-center gap-2 px-4 py-3 mb-6 bg-medikiosk-surface rounded-xl text-medikiosk-primary font-medium w-full justify-center"
         >
           <Volume2 className="w-5 h-5" />
-          {isHi ? 'ऑडियो में सुनें' : 'Listen to Consent (Audio)'}
+          {t(language, 'consent.listen')}
           {audioPlayed && <CheckCircle2 className="w-4 h-4 text-medikiosk-accent" />}
         </button>
 
         <div className="space-y-3 mb-8">
-          {BASE_CONSENT_ITEMS.map((item, i) => (
+          {BASE_CONSENT_ITEMS.map((_, i) => (
             <label
               key={i}
               className={`flex items-start gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all ${
@@ -119,7 +120,7 @@ export function ConsentScreen() {
                 onChange={() => toggle(i)}
                 className="mt-1 w-5 h-5 accent-medikiosk-primary"
               />
-              <span className="text-slate-700">{isHi ? item.hi : item.en}</span>
+              <span className="text-slate-700">{getConsentText(i, language)}</span>
             </label>
           ))}
         </div>
@@ -129,10 +130,10 @@ export function ConsentScreen() {
           disabled={!allChecked}
           className="kiosk-btn-primary w-full"
         >
-          {isHi ? 'सहमति दें और जारी रखें' : 'Grant Consent & Continue'}
+          {t(language, 'consent.continue')}
         </button>
         <button onClick={() => setStep('identity')} className="w-full text-medikiosk-muted py-3 mt-2">
-          ← {isHi ? 'वापस' : 'Back'}
+          ← {t(language, 'back')}
         </button>
       </div>
     </div>

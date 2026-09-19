@@ -21,6 +21,7 @@ import {
   type AbhaAuthMethod,
   type AbhaAccountProfile,
 } from '../../services/abhaSdkService'
+import { t } from '../../i18n'
 
 export function IdentityScreen() {
   const { language, setIdentity, setStep } = useApp()
@@ -233,7 +234,7 @@ export function IdentityScreen() {
             </div>
             <div>
               <h2 className="text-2xl font-bold text-slate-800">
-                {isHi ? 'रोगी पहचान सत्यापन' : 'Patient Identity & Verification'}
+                {t(language, 'identity.title')}
               </h2>
               <div className="flex items-center gap-2 text-xs font-semibold text-emerald-700 mt-0.5">
                 <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -262,7 +263,7 @@ export function IdentityScreen() {
             }`}
           >
             <ShieldCheck className="w-4 h-4 text-medikiosk-primary" />
-            {isHi ? 'ABHA से सत्यापन (अनुशंसित)' : 'ABDM ABHA Verification (Fast & Verified)'}
+            {t(language, 'identity.abhaTab')}
           </button>
           <button
             onClick={() => setTab('manual')}
@@ -273,7 +274,7 @@ export function IdentityScreen() {
             }`}
           >
             <CreditCard className="w-4 h-4 text-slate-400" />
-            {isHi ? 'मैन्युअल प्रविष्टि' : 'Manual Entry (No ABHA)'}
+            {t(language, 'identity.manualTab')}
           </button>
         </div>
 
@@ -508,7 +509,7 @@ export function IdentityScreen() {
         <div className="mt-6 pt-6 border-t border-slate-200 space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold uppercase tracking-wider text-slate-700">
-              {isHi ? 'रोगी की व्यक्तिगत जानकारी' : 'Patient Information'}
+              {t(language, 'identity.patientInfo')}
             </h3>
             {verifiedProfile && (
               <span className="text-xs font-semibold text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full flex items-center gap-1">
@@ -519,7 +520,7 @@ export function IdentityScreen() {
 
           <div>
             <label className="block text-xs font-medium text-slate-700 mb-1">
-              {isHi ? 'पूरा नाम' : 'Full Name'} *
+              {t(language, 'identity.fullName')} *
             </label>
             <input
               type="text"
@@ -533,7 +534,7 @@ export function IdentityScreen() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">
-                {isHi ? 'उम्र (वर्ष)' : 'Age (Years)'} *
+                {t(language, 'identity.age')} *
               </label>
               <input
                 type="number"
@@ -548,16 +549,16 @@ export function IdentityScreen() {
 
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">
-                {isHi ? 'लिंग' : 'Gender'}
+                {t(language, 'identity.gender')}
               </label>
               <select
                 value={gender}
                 onChange={(e) => setGender(e.target.value as typeof gender)}
                 className="w-full px-4 py-3 rounded-xl border-2 border-medikiosk-border focus:border-medikiosk-primary focus:outline-none text-base bg-white"
               >
-                <option value="male">{isHi ? 'पुरुष (Male)' : 'Male'}</option>
-                <option value="female">{isHi ? 'महिला (Female)' : 'Female'}</option>
-                <option value="other">{isHi ? 'अन्य (Other)' : 'Other'}</option>
+                <option value="male">{t(language, 'identity.male')}</option>
+                <option value="female">{t(language, 'identity.female')}</option>
+                <option value="other">{t(language, 'identity.other')}</option>
               </select>
             </div>
           </div>
@@ -598,7 +599,7 @@ export function IdentityScreen() {
             disabled={!name || !age}
             className="kiosk-btn-primary w-full py-4 text-lg font-bold flex items-center justify-center gap-2"
           >
-            {isHi ? 'सहमति स्क्रीन पर आगे बढ़ें' : 'Proceed to Consent Screen'} →
+            {t(language, 'identity.proceed')} →
           </button>
 
           <button
@@ -613,7 +614,7 @@ export function IdentityScreen() {
             onClick={() => setStep('welcome')}
             className="text-medikiosk-muted py-2 text-sm text-center hover:text-slate-800"
           >
-            ← {isHi ? 'प्रारंभिक स्क्रीन पर वापस जाएं' : 'Back to Welcome Screen'}
+            ← {t(language, 'identity.back')}
           </button>
         </div>
 

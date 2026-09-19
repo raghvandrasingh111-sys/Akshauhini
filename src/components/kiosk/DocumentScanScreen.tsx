@@ -3,6 +3,7 @@ import { FileText, FlaskConical, ClipboardList, Scan, Loader2, AlertTriangle } f
 import { useApp } from '../../context/AppContext'
 import { simulateScan, buildTimeline, getAbnormalLabs } from '../../services/ocrService'
 import type { ExtractedDocument } from '../../types'
+import { t } from '../../i18n'
 
 const DOC_TYPES = [
   {
@@ -30,7 +31,6 @@ const DOC_TYPES = [
 
 export function DocumentScanScreen() {
   const { language, documents, addDocument, finalizeSummary, setStep } = useApp()
-  const isHi = language === 'hi'
   const [scanning, setScanning] = useState<string | null>(null)
 
   const handleScan = async (type: ExtractedDocument['type']) => {
@@ -50,17 +50,15 @@ export function DocumentScanScreen() {
           <div className="flex items-center gap-3 mb-2">
             <Scan className="w-8 h-8 text-medikiosk-primary" />
             <h2 className="text-2xl font-bold">
-              {isHi ? 'चिकित्सा दस्तावेज़ स्कैन' : 'Medical Document Scan'}
+              {t(language, 'documents.title')}
             </h2>
           </div>
           <p className="text-medikiosk-muted mb-6">
-            {isHi
-              ? 'पुरानी प्रिस्क्रिप्शन, लैब रिपोर्ट स्कैन करें'
-              : 'Scan old prescriptions, lab reports & discharge summaries'}
+            {t(language, 'documents.subtitle')}
           </p>
 
           <div className="grid md:grid-cols-3 gap-4">
-            {DOC_TYPES.map(({ type, icon: Icon, en, hi, color }) => (
+            {DOC_TYPES.map(({ type, icon: Icon, color }) => (
               <button
                 key={type}
                 onClick={() => handleScan(type)}
@@ -72,11 +70,11 @@ export function DocumentScanScreen() {
                 ) : (
                   <Icon className={`w-10 h-10 ${color}`} />
                 )}
-                <span className="font-semibold">{isHi ? hi : en}</span>
+                <span className="font-semibold">{type === 'lab_report' ? t(language, 'documents.lab') : type === 'prescription' ? t(language, 'documents.prescription') : t(language, 'documents.discharge')}</span>
                 <span className="text-xs text-medikiosk-muted">
                   {scanning === type
-                    ? isHi ? 'OCR प्रसंस्करण…' : 'Processing OCR…'
-                    : isHi ? 'स्कैन करें' : 'Tap to Scan'}
+                    ? t(language, 'documents.processing')
+                    : t(language, 'documents.scan')}
                 </span>
               </button>
             ))}
@@ -86,7 +84,7 @@ export function DocumentScanScreen() {
         {documents.length > 0 && (
           <div className="kiosk-card mb-6 animate-slide-up">
             <h3 className="font-bold text-lg mb-4">
-              {isHi ? 'निकाली गई जानकारी' : 'Extracted Clinical Data'}
+              {t(language, 'documents.extracted')}
             </h3>
             <div className="space-y-4">
               {timeline.map((doc) => (
@@ -95,7 +93,7 @@ export function DocumentScanScreen() {
                     <div>
                       <p className="font-semibold">{doc.fileName}</p>
                       <p className="text-sm text-medikiosk-muted">
-                        {doc.date} · {Math.round(doc.confidence * 100)}% {isHi ? 'विश्वास' : 'confidence'}
+                        {doc.date} · {Math.round(doc.confidence * 100)}% {t(language, 'documents.confidence')}
                       </p>
                     </div>
                     <span className="px-2 py-1 bg-medikiosk-surface text-medikiosk-primary text-xs rounded-full capitalize">
@@ -126,7 +124,7 @@ export function DocumentScanScreen() {
                 <AlertTriangle className="w-5 h-5 text-medikiosk-emergency shrink-0 mt-0.5" />
                 <div>
                   <p className="font-semibold text-medikiosk-emergency">
-                    {isHi ? 'असामान्य लैब मान' : 'Abnormal Lab Values Flagged'}
+                    {t(language, 'documents.abnormal')}
                   </p>
                   <p className="text-sm text-slate-700">
                     {abnormalLabs.map((l) => `${l.label}: ${l.value} ${l.unit} (Ref: ${l.referenceRange})`).join('; ')}
@@ -139,10 +137,10 @@ export function DocumentScanScreen() {
 
         <div className="flex flex-col gap-3">
           <button onClick={finalizeSummary} className="kiosk-btn-primary w-full">
-            {isHi ? 'सारांश बनाएं और EMR भेजें' : 'Generate Summary & Send to EMR'}
+            {t(language, 'documents.finish')}
           </button>
           <button onClick={() => setStep('interview')} className="text-medikiosk-muted py-2">
-            ← {isHi ? 'साक्षात्कार पर वापस' : 'Back to Interview'}
+            ← {t(language, 'documents.back')}
           </button>
         </div>
       </div>
