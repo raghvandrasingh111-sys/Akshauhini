@@ -21,6 +21,52 @@ function PatientLogin() {
 
 function PatientEntry() {
   const navigate = useNavigate()
+  const [mode, setMode] = useState<'signin' | 'signup'>('signin')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+
+  const continueWithGoogle = async () => {
+    setBusy(true)
+    setError('')
+    const result = await signInPatientWithGoogle()
+    if (result.error) {
+      setError(result.error.message)
+      setBusy(false)
+    }
+  }
+
+  return <main className="min-h-screen bg-[#EAF4F0] px-4 py-10 text-slate-900">
+    <div className="mx-auto max-w-md">
+      <div className="mb-8 text-center">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#0F5132] text-white shadow-lg"><HeartPulse /></div>
+        <p className="mt-4 text-xs font-bold uppercase tracking-[0.22em] text-teal-700">Sanjeevani patient space</p>
+        <h1 className="mt-2 text-3xl font-black">Your health, your control.</h1>
+        <p className="mt-2 text-sm text-slate-500">Simple, secure access with your Google account.</p>
+      </div>
+      <section className="rounded-[2rem] bg-white p-7 shadow-xl shadow-teal-900/10">
+        <div className="grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1">
+          <button type="button" onClick={() => { setMode('signin'); setError('') }} className={`rounded-lg py-2.5 text-sm font-bold ${mode === 'signin' ? 'bg-white text-teal-800 shadow-sm' : 'text-slate-500'}`}>Sign in</button>
+          <button type="button" onClick={() => { setMode('signup'); setError('') }} className={`rounded-lg py-2.5 text-sm font-bold ${mode === 'signup' ? 'bg-white text-teal-800 shadow-sm' : 'text-slate-500'}`}>Sign up</button>
+        </div>
+        <div className="mt-6 rounded-2xl bg-teal-50 p-5 text-center">
+          <ShieldCheck className="mx-auto h-8 w-8 text-teal-700" />
+          <h2 className="mt-3 text-xl font-black">{mode === 'signin' ? 'Welcome back' : 'Create your patient account'}</h2>
+          <p className="mt-2 text-sm leading-relaxed text-slate-600">{mode === 'signin' ? 'Use Google to securely open your patient dashboard.' : 'Use Google to create your account. We will ask for your health details next.'}</p>
+        </div>
+        {error && <p className="mt-4 rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}
+        <button type="button" onClick={() => void continueWithGoogle()} disabled={busy} className="mt-5 flex w-full items-center justify-center gap-3 rounded-xl bg-[#0F5132] px-4 py-4 font-bold text-white disabled:opacity-50">
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-sm font-black text-[#0F5132]">G</span>
+          {busy ? 'Opening Google...' : mode === 'signin' ? 'Sign in with Google' : 'Sign up with Google'}
+        </button>
+        <p className="mt-4 text-center text-xs text-slate-500"><LockKeyhole className="mr-1 inline h-3.5 w-3.5" /> Aadhaar becomes your unique Patient ID during setup.</p>
+        <button type="button" onClick={() => navigate('/')} className="mt-6 w-full text-sm text-slate-500">Back to kiosk</button>
+      </section>
+    </div>
+  </main>
+}
+
+export function LegacyPatientEntry() {
+  const navigate = useNavigate()
   const [method, setMethod] = useState<'google' | 'manual'>('google')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
