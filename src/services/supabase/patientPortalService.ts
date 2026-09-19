@@ -33,6 +33,20 @@ function requireSupabase() {
   return supabase
 }
 
+function readLocalPatientIntakes(patientId: string): PatientIntakeRecord[] {
+  try {
+    const raw = localStorage.getItem('sanjeevani_patient_intakes')
+    if (!raw) return []
+    const parsed = JSON.parse(raw) as PatientIntakeRecord[]
+    return parsed.filter((entry) => entry && (
+      entry.id === patientId ||
+      entry.answers?.some((answer) => String(answer?.questionId ?? '').includes(patientId))
+    ))
+  } catch {
+    return []
+  }
+}
+
 export async function getPatientConsentRequests(patientId: string) {
   const client = requireSupabase()
   const { data, error } = await client
@@ -68,14 +82,27 @@ export async function getPatientDocuments(patientId: string) {
 }
 
 export async function getPatientIntakes(patientId: string) {
-  const client = requireSupabase()
-  const { data, error } = await client
-    .from('kiosk_intakes')
-    .select('id, language, answers, clinical_summary, red_flags, is_emergency, history_mode, created_at')
-    .eq('patient_id', patientId)
-    .order('created_at', { ascending: false })
-  if (error) throw error
-  return (data ?? []) as PatientIntakeRecord[]
+  try {
+    const client = requireSupabase()
+    const { data, error } = await client
+      .from('kiosk_intakes')
+      .select('id, language, answers, clinical_summary, red_flags, is_emergency, history_mode, created_at')
+      .eq('patient_id', patientId)
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      const localFallback = readLocalPatientIntakes(patientId)
+      if (localFallback.length > 0) return localFallback
+      throw error
+    }
+
+    const records = (data ?? []) as PatientIntakeRecord[]
+    if (records.length > 0) return records
+
+    return readLocalPatientIntakes(patientId)
+  } catch {
+    return readLocalPatientIntakes(patientId)
+  }
 }
 
 export async function uploadPatientDocument(params: {

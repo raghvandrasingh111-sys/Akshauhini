@@ -17,6 +17,7 @@ export interface PatientRegistryRecord {
 
 const PATIENTS_KEY = 'sanjeevani_patient_registry'
 const ACCESS_REQUESTS_KEY = 'sanjeevani_doctor_access_requests'
+const PATIENT_INTAKES_KEY = 'sanjeevani_patient_intakes'
 
 export function normalizePhone(phone: string): string {
   return phone.replace(/\D/g, '').slice(-10)
@@ -143,6 +144,22 @@ export async function savePatientSummary(
     historyMode: string
   }
 ): Promise<void> {
+  const intakeEntry = {
+    id: `local_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    patient_id: patientId,
+    language: input.language,
+    answers: input.answers,
+    documents: input.documents,
+    clinical_summary: summary,
+    red_flags: input.redFlags,
+    is_emergency: input.isEmergency,
+    history_mode: input.historyMode,
+    created_at: new Date().toISOString(),
+  }
+
+  const existingIntakes = read<Array<Record<string, unknown>>>(PATIENT_INTAKES_KEY, [])
+  write(PATIENT_INTAKES_KEY, [intakeEntry, ...existingIntakes.filter((entry) => entry.patient_id !== patientId)])
+
   if (supabase) {
     const { error } = await supabase.rpc('save_kiosk_intake', {
       p_patient_id: patientId,
@@ -156,8 +173,9 @@ export async function savePatientSummary(
     })
     if (!error) return
     console.warn('[PatientRegistry] Supabase intake save failed:', error.message)
-    throw error
+    return
   }
+
   const patients = read<PatientRegistryRecord[]>(PATIENTS_KEY, [])
   write(
     PATIENTS_KEY,
