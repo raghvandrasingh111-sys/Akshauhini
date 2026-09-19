@@ -171,7 +171,7 @@ export function InterviewScreen() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-medikiosk-surface via-white to-teal-50 p-4 md:p-6">
-      {showEmergency && <EmergencyAlert flags={redFlags} language={isHi ? 'hi' : 'en'} />}
+      {showEmergency && <EmergencyAlert flags={redFlags} language={isHi ? 'hi' : 'en'} onClose={() => setShowEmergency(false)} />}
 
       <div className="max-w-3xl mx-auto">
         <div className="flex items-center justify-between mb-4">

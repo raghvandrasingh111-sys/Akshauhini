@@ -8,20 +8,28 @@ import type {
 } from '../types'
 
 const GEMINI_STORAGE_KEY = 'medikiosk_gemini_api_key'
-const DEFAULT_MODEL = 'gemini-1.5-flash'
+const DEFAULT_MODEL = 'gemini-2.5-flash'
 
 export function getGeminiApiKey(): string {
+  let key = ''
   if (typeof window !== 'undefined') {
     const stored = localStorage.getItem(GEMINI_STORAGE_KEY)
-    if (stored && stored.trim()) return stored.trim()
+    if (stored && stored.trim()) {
+      key = stored.trim()
+    }
   }
-  return (import.meta.env.VITE_GEMINI_API_KEY as string) || ''
+  if (!key) {
+    key = (import.meta.env.VITE_GEMINI_API_KEY as string) || ''
+  }
+  // Sanitize key by trimming whitespace and trailing period
+  return key.trim().replace(/\.+$/, '')
 }
 
 export function setGeminiApiKey(key: string): void {
   if (typeof window !== 'undefined') {
-    if (key.trim()) {
-      localStorage.setItem(GEMINI_STORAGE_KEY, key.trim())
+    const cleaned = key.trim().replace(/\.+$/, '')
+    if (cleaned) {
+      localStorage.setItem(GEMINI_STORAGE_KEY, cleaned)
     } else {
       localStorage.removeItem(GEMINI_STORAGE_KEY)
     }

@@ -22,9 +22,14 @@ export function WelcomeScreen() {
             <HeartPulse className="w-8 h-8 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">MediKiosk</h1>
-            <p className="text-sm text-medikiosk-muted">
-              {isHi ? 'AI-संचालित नैदानिक इनटेक' : 'AI-Powered Clinical Intake'}
+            <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
+              <span>Sanjeevani</span>
+              <span className="text-sm font-normal text-medikiosk-primary bg-medikiosk-surface px-2 py-0.5 rounded-md border border-medikiosk-primary/20">
+                संजीवनी
+              </span>
+            </h1>
+            <p className="text-xs text-medikiosk-muted font-medium">
+              {isHi ? 'AI-संचालित डिजिटल क्लिनिकल इनटेक' : 'AI-Powered Digital Clinical Intake Platform'}
             </p>
           </div>
         </div>

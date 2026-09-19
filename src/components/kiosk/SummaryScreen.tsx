@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import {
   CheckCircle2,
   Send,
@@ -8,12 +9,19 @@ import {
   Loader2,
   Stethoscope,
   Activity,
+  UserCheck,
+  RefreshCw,
+  Cloud,
+  CloudOff,
 } from 'lucide-react'
 import { useApp } from '../../context/AppContext'
+import { saveIntakeToSupabase, type SyncStatus } from '../../services/supabaseService'
 
 export function SummaryScreen() {
-  const { language, identity, summary, verifySummary, reset, isEmergency, geminiLoading } = useApp()
+  const { language, identity, summary, reset, isEmergency, geminiLoading, interviewAnswers, redFlags, historyMode } = useApp()
   const isHi = language === 'hi'
+  const [done, setDone] = useState(false)
+  const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null)
 
   if (!summary) return null
 
@@ -28,14 +36,102 @@ export function SummaryScreen() {
     }
   }
 
-  const handleComplete = () => {
-    verifySummary()
+  const handleComplete = async () => {
+    // 1. Always save to localStorage first (works offline)
     localStorage.setItem(
       'medikiosk_physician_summaries',
       JSON.stringify([
         summary,
         ...JSON.parse(localStorage.getItem('medikiosk_physician_summaries') || '[]'),
       ])
+    )
+
+    setDone(true)
+
+    // 2. Attempt cloud sync to Supabase
+    if (identity) {
+      const result = await saveIntakeToSupabase(
+        summary,
+        identity,
+        interviewAnswers,
+        redFlags,
+        isEmergency,
+        historyMode
+      )
+      setSyncStatus(result.status)
+    }
+
+    // Auto-reset for next patient after 8 seconds
+    setTimeout(() => reset(), 8000)
+  }
+
+  // ── Completion / Thank-you screen ─────────────────────────────────
+  if (done) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-white flex items-center justify-center p-6">
+        <div className="max-w-md w-full text-center animate-slide-up">
+          <div className="w-24 h-24 rounded-full bg-emerald-500 flex items-center justify-center mx-auto mb-6 shadow-xl">
+            <UserCheck className="w-12 h-12 text-white" />
+          </div>
+          <h2 className="text-3xl font-bold text-slate-900 mb-2">
+            {isHi ? 'धन्यवाद! 🙏' : 'Thank You! 🙏'}
+          </h2>
+          <p className="text-lg text-slate-600 mb-1">
+            {identity?.name && <span className="font-semibold text-slate-800">{identity.name}</span>}
+          </p>
+          <p className="text-slate-500 mb-8">
+            {isHi
+              ? 'आपकी जानकारी सुरक्षित रूप से दर्ज हो गई। कृपया प्रतीक्षालय में बैठें — डॉक्टर जल्द बुलाएंगे।'
+              : 'Your health information has been securely recorded. Please take a seat in the waiting area — the doctor will call you shortly.'}
+          </p>
+
+          {/* Token number visual */}
+          <div className="mb-8 p-6 bg-white rounded-2xl border-2 border-emerald-200 shadow-md">
+            <p className="text-xs font-bold uppercase tracking-widest text-emerald-600 mb-1">
+              {isHi ? 'आपका टोकन नंबर' : 'Your Token Number'}
+            </p>
+            <p className="text-6xl font-black text-slate-900">
+              {String(Math.floor(Math.random() * 90) + 10).padStart(2, '0')}
+            </p>
+            <p className="text-sm text-slate-400 mt-2">
+              {isHi ? 'स्क्रीन पर अपना नंबर देखते रहें' : 'Watch the display screen for your number'}
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-3">
+            {/* Cloud sync status badge */}
+            <div className={`flex items-center justify-center gap-2 py-2 px-4 rounded-xl text-sm font-semibold border ${
+              syncStatus === 'synced'
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                : syncStatus === 'error'
+                ? 'bg-rose-50 border-rose-200 text-rose-700'
+                : syncStatus === null
+                ? 'bg-slate-50 border-slate-200 text-slate-500 animate-pulse'
+                : 'bg-amber-50 border-amber-200 text-amber-700'
+            }`}>
+              {syncStatus === 'synced' ? (
+                <><Cloud className="w-4 h-4" /> {isHi ? '☁️ क्लाउड में सुरक्षित' : '☁️ Synced to cloud'}</>
+              ) : syncStatus === 'error' || syncStatus === 'offline' ? (
+                <><CloudOff className="w-4 h-4" /> {isHi ? '⚠️ ऑफलाइन — स्थानीय रूप से सहेजा' : '⚠️ Offline — saved locally'}</>
+              ) : (
+                <><Loader2 className="w-4 h-4 animate-spin" /> {isHi ? 'क्लाउड में सहेज रहे हैं…' : 'Syncing to cloud…'}</>
+              )}
+            </div>
+
+            <button
+              onClick={reset}
+              className="kiosk-btn-primary w-full flex items-center justify-center gap-2"
+            >
+              <RefreshCw className="w-5 h-5" />
+              {isHi ? 'नया रोगी शुरू करें' : 'Start New Patient'}
+            </button>
+            <p className="text-xs text-slate-400">
+              {isHi ? '(8 सेकंड में स्वतः रीसेट हो जाएगा)' : '(Auto-resets in 8 seconds)'}
+            </p>
+          </div>
+
+        </div>
+      </div>
     )
   }
 
