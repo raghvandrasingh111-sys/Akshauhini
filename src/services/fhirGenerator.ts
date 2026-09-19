@@ -208,7 +208,7 @@ function buildFHIRBundle(
           resourceType: 'DocumentReference',
           id: 'doc-ref-001',
           status: 'current',
-          description: 'MediKiosk Clinical Intake Summary',
+          description: 'Sanjeevani Clinical Intake Summary',
           content: [
             {
               attachment: {

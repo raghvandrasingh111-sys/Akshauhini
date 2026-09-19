@@ -213,8 +213,11 @@ export function PhysicianDashboard() {
         <div className="flex items-center gap-3">
           <Stethoscope className="w-7 h-7 text-medikiosk-primary" />
           <div>
-            <h1 className="text-xl font-bold">Physician EMR Dashboard</h1>
-            <p className="text-sm text-medikiosk-muted">MediKiosk · FHIR R4 · Gemini AI Co-Pilot</p>
+            <h1 className="text-xl font-bold flex items-center gap-2">
+              <span>Sanjeevani EMR</span>
+              <span className="text-xs font-semibold text-teal-700 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded-md">संजीवनी</span>
+            </h1>
+            <p className="text-xs text-medikiosk-muted">Sanjeevani · FHIR R4 · Gemini AI Co-Pilot · ABDM</p>
           </div>
         </div>
         <div className="flex items-center gap-3">

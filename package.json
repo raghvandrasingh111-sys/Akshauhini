@@ -1,9 +1,9 @@
 {
-  "name": "medikiosk",
+  "name": "sanjeevani",
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "AI-Powered Digital Clinical Intake Platform for Indian OPDs",
+  "description": "Sanjeevani — AI-Powered Digital Clinical Intake Platform with Gemini Co-Pilot & ABDM ABHA Verification",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",

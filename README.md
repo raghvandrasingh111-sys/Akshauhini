@@ -1,9 +1,9 @@
-# Akshauhini — MediKiosk Clinical Intake Platform
+# Sanjeevani (संजीवनी) — AI Clinical Intake Platform
 
 **Smart India Hackathon 2026 · Problem ID: SIH26047**  
 Ministry of Ayush (AIIA) · MedTech / HealthTech
 
-MediKiosk is a first-mile clinical intake kiosk that offloads structured history-taking from overburdened OPD physicians. Patients narrate their history in local languages via voice or touch, scan paper medical records via OCR, and deliver a physician-ready FHIR summary before consultation begins.
+Sanjeevani (संजीवनी) is a first-mile clinical intake kiosk that offloads structured history-taking from overburdened OPD physicians. Powered by Google Gemini AI, ABDM ABHA identity verification, and FHIR R4 interoperability, patients narrate their history in local languages via voice or touch, scan paper records, and deliver a physician-ready diagnostic summary before consultation begins.
 
 ## Features
 

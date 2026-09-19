@@ -43,8 +43,8 @@ export function ConsentScreen() {
     setAudioPlayed(true)
     if ('speechSynthesis' in window) {
       const text = isHi
-        ? 'MediKiosk आपका स्वास्थ्य इतिहास सुरक्षित रूप से एकत्र करेगा। यह निदान नहीं है।'
-        : 'MediKiosk will securely collect your health history. This is not a diagnosis.'
+        ? 'संजीवनी (Sanjeevani) आपका स्वास्थ्य इतिहास सुरक्षित रूप से एकत्र करेगा। यह निदान नहीं है।'
+        : 'Sanjeevani will securely collect your health history. This is not a diagnosis.'
       const utterance = new SpeechSynthesisUtterance(text)
       utterance.lang = isHi ? 'hi-IN' : 'en-IN'
       speechSynthesis.speak(utterance)
