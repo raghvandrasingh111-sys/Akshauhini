@@ -108,9 +108,59 @@ function buildFHIRBundle(
         resource: {
           resourceType: 'Patient',
           id: identity.abhaId ?? 'patient-001',
+          identifier: [
+            ...(identity.abhaNumber || identity.abhaId
+              ? [
+                  {
+                    system: 'https://healthid.abdm.gov.in',
+                    type: {
+                      coding: [
+                        {
+                          system: 'http://terminology.hl7.org/CodeSystem/v2-0203',
+                          code: 'MR',
+                          display: 'ABHA Health ID Number',
+                        },
+                      ],
+                    },
+                    value: identity.abhaNumber || identity.abhaId,
+                  },
+                ]
+              : []),
+            ...(identity.abhaAddress
+              ? [
+                  {
+                    system: 'https://abdm.gov.in/abha-address',
+                    value: identity.abhaAddress,
+                  },
+                ]
+              : []),
+          ],
           name: [{ text: identity.name }],
           gender: identity.gender,
           birthDate: estimateBirthDate(identity.age),
+          telecom: identity.phone ? [{ system: 'phone', value: identity.phone }] : undefined,
+          address: identity.address
+            ? [
+                {
+                  line: [identity.address],
+                  district: identity.district,
+                  state: identity.state,
+                  postalCode: identity.pincode,
+                  country: 'IN',
+                },
+              ]
+            : undefined,
+          meta: identity.isAbhaVerified
+            ? {
+                tag: [
+                  {
+                    system: 'https://abdm.gov.in/verification-status',
+                    code: 'verified',
+                    display: 'ABDM ABHA KYC Verified',
+                  },
+                ],
+              }
+            : undefined,
         },
       },
       {

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Shield, Volume2, CheckCircle2 } from 'lucide-react'
 import { useApp } from '../../context/AppContext'
 
-const CONSENT_ITEMS = [
+const BASE_CONSENT_ITEMS = [
   {
     en: 'I consent to AI-assisted clinical history collection for this OPD visit.',
     hi: 'मैं इस OPD विज़िट के लिए AI-सहायता प्राप्त नैदानिक इतिहास संग्रह के लिए सहमति देता/देती हूँ।',
@@ -19,12 +19,16 @@ const CONSENT_ITEMS = [
     en: 'I consent to FHIR-standard data transmission to the hospital EMR system.',
     hi: 'मैं अस्पताल EMR प्रणाली में FHIR-मानक डेटा प्रसारण के लिए सहमति देता/देती हूँ।',
   },
+  {
+    en: 'I consent to link this clinical intake to my ABDM ABHA digital health record (HIP/HIU).',
+    hi: 'मैं इस नैदानिक इनटेक को अपने ABDM ABHA डिजिटल स्वास्थ्य रिकॉर्ड (HIP/HIU) से जोड़ने की सहमति देता/देती हूँ।',
+  },
 ]
 
 export function ConsentScreen() {
-  const { language, grantConsent, setStep } = useApp()
+  const { language, identity, grantConsent, setStep } = useApp()
   const isHi = language === 'hi'
-  const [checked, setChecked] = useState<boolean[]>(CONSENT_ITEMS.map(() => false))
+  const [checked, setChecked] = useState<boolean[]>(BASE_CONSENT_ITEMS.map(() => false))
   const [audioPlayed, setAudioPlayed] = useState(false)
 
   const allChecked = checked.every(Boolean)
@@ -61,9 +65,34 @@ export function ConsentScreen() {
             {isHi ? 'सहमति और गोपनीयता' : 'Consent & Privacy'}
           </h2>
         </div>
-        <p className="text-medikiosk-muted mb-6">
+        <p className="text-medikiosk-muted mb-4">
           {isHi ? 'DPDP Act 2023 · ABDM अनुपालन' : 'DPDP Act 2023 · ABDM Compliant'}
         </p>
+
+        {/* Patient Identity Confirmation Card */}
+        {identity && (
+          <div className="mb-6 p-4 rounded-xl border border-teal-200 bg-teal-50/60 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-teal-600 text-white font-bold flex items-center justify-center text-sm">
+                {identity.name.charAt(0)}
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-slate-800 text-sm">{identity.name}</span>
+                  {identity.isAbhaVerified && (
+                    <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full flex items-center gap-0.5">
+                      <CheckCircle2 className="w-3 h-3 text-emerald-600" /> ABDM VERIFIED
+                    </span>
+                  )}
+                </div>
+                <div className="text-xs text-slate-500 mt-0.5">
+                  Age: {identity.age}y · {identity.gender}
+                  {identity.abhaId && <span className="ml-2 font-mono text-teal-700">ABHA: {identity.abhaId}</span>}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         <button
           onClick={playAudio}
@@ -75,7 +104,7 @@ export function ConsentScreen() {
         </button>
 
         <div className="space-y-3 mb-8">
-          {CONSENT_ITEMS.map((item, i) => (
+          {BASE_CONSENT_ITEMS.map((item, i) => (
             <label
               key={i}
               className={`flex items-start gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all ${

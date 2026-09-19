@@ -14,10 +14,21 @@ export type KioskStep =
 
 export interface PatientIdentity {
   abhaId?: string
+  abhaNumber?: string
+  abhaAddress?: string
   name: string
   age: number
   gender: 'male' | 'female' | 'other'
   phone?: string
+  address?: string
+  district?: string
+  state?: string
+  pincode?: string
+  profilePhoto?: string
+  qrCode?: string
+  isAbhaVerified?: boolean
+  verificationMethod?: 'aadhaar_otp' | 'mobile_otp' | 'demo' | 'manual'
+  verificationTimestamp?: string
 }
 
 export interface InterviewAnswer {

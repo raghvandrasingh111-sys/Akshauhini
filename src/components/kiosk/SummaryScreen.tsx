@@ -1,8 +1,8 @@
-import { CheckCircle2, Send, Volume2, AlertTriangle } from 'lucide-react'
+import { CheckCircle2, Send, Volume2, AlertTriangle, ShieldCheck } from 'lucide-react'
 import { useApp } from '../../context/AppContext'
 
 export function SummaryScreen() {
-  const { language, summary, verifySummary, reset, isEmergency } = useApp()
+  const { language, identity, summary, verifySummary, reset, isEmergency } = useApp()
   const isHi = language === 'hi'
 
   if (!summary) return null
@@ -43,6 +43,39 @@ export function SummaryScreen() {
             </p>
           </div>
         </div>
+
+        {/* Patient Identity Banner with ABHA */}
+        {identity && (
+          <div className="mb-6 p-4 rounded-2xl bg-slate-900 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-lg">{identity.name}</span>
+                {identity.isAbhaVerified ? (
+                  <span className="text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                    <ShieldCheck className="w-3.5 h-3.5" /> ABDM VERIFIED
+                  </span>
+                ) : (
+                  <span className="text-[11px] font-semibold bg-slate-700 text-slate-300 px-2 py-0.5 rounded-full">
+                    Manual Intake
+                  </span>
+                )}
+              </div>
+              <div className="text-xs text-slate-400 mt-1 flex flex-wrap gap-x-4 gap-y-1">
+                <span>Age: {identity.age}y</span>
+                <span className="capitalize">Gender: {identity.gender}</span>
+                {identity.phone && <span>Phone: {identity.phone}</span>}
+                {identity.address && <span>Loc: {identity.address}</span>}
+              </div>
+            </div>
+
+            {identity.abhaId && (
+              <div className="text-left sm:text-right">
+                <div className="text-[10px] text-teal-300 uppercase tracking-wider font-semibold">ABHA ID</div>
+                <div className="font-mono text-sm font-bold text-teal-100">{identity.abhaId}</div>
+              </div>
+            )}
+          </div>
+        )}
 
         {isEmergency && (
           <div className="mb-6 p-4 bg-medikiosk-emergency-light border-2 border-medikiosk-emergency rounded-xl flex items-center gap-3">

@@ -7,6 +7,7 @@ import {
   Edit3,
   RefreshCw,
   User,
+  ShieldCheck,
 } from 'lucide-react'
 import type { ClinicalSummary } from '../../types'
 
@@ -142,7 +143,14 @@ export function PhysicianDashboard() {
               >
                 <div className="flex items-start justify-between">
                   <div>
-                    <p className="font-semibold">{s.patientId}</p>
+                    <div className="flex items-center gap-1.5">
+                      <p className="font-semibold text-sm truncate">{s.patientId}</p>
+                      {s.patientId?.startsWith('91-') && (
+                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                          <ShieldCheck className="w-3 h-3 text-emerald-600" /> ABHA
+                        </span>
+                      )}
+                    </div>
                     <p className="text-sm text-medikiosk-muted truncate max-w-[200px]">
                       {s.chiefComplaint}
                     </p>
@@ -212,6 +220,18 @@ export function PhysicianDashboard() {
                       Verify & Accept
                     </button>
                   </div>
+                </div>
+
+                <div className="mb-4 p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
+                  <div>
+                    <span className="text-xs text-slate-500 uppercase font-semibold">Patient / Health Record ID</span>
+                    <div className="font-mono font-bold text-slate-800 text-sm">{selected.patientId}</div>
+                  </div>
+                  {selected.patientId?.startsWith('91-') && (
+                    <span className="flex items-center gap-1 text-xs font-bold text-emerald-800 bg-emerald-100 px-2.5 py-1 rounded-full border border-emerald-300">
+                      <ShieldCheck className="w-4 h-4 text-emerald-600" /> ABDM KYC Verified
+                    </span>
+                  )}
                 </div>
 
                 <div className="grid md:grid-cols-2 gap-4">
