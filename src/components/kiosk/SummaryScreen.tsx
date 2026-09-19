@@ -11,13 +11,17 @@ import {
   Activity,
   UserCheck,
   RefreshCw,
+  Cloud,
+  CloudOff,
 } from 'lucide-react'
 import { useApp } from '../../context/AppContext'
+import { saveIntakeToSupabase, type SyncStatus } from '../../services/supabaseService'
 
 export function SummaryScreen() {
-  const { language, identity, summary, reset, isEmergency, geminiLoading } = useApp()
+  const { language, identity, summary, reset, isEmergency, geminiLoading, interviewAnswers, redFlags, historyMode } = useApp()
   const isHi = language === 'hi'
   const [done, setDone] = useState(false)
+  const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null)
 
   if (!summary) return null
 
@@ -32,7 +36,8 @@ export function SummaryScreen() {
     }
   }
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
+    // 1. Always save to localStorage first (works offline)
     localStorage.setItem(
       'medikiosk_physician_summaries',
       JSON.stringify([
@@ -40,7 +45,22 @@ export function SummaryScreen() {
         ...JSON.parse(localStorage.getItem('medikiosk_physician_summaries') || '[]'),
       ])
     )
+
     setDone(true)
+
+    // 2. Attempt cloud sync to Supabase
+    if (identity) {
+      const result = await saveIntakeToSupabase(
+        summary,
+        identity,
+        interviewAnswers,
+        redFlags,
+        isEmergency,
+        historyMode
+      )
+      setSyncStatus(result.status)
+    }
+
     // Auto-reset for next patient after 8 seconds
     setTimeout(() => reset(), 8000)
   }
@@ -79,6 +99,25 @@ export function SummaryScreen() {
           </div>
 
           <div className="flex flex-col gap-3">
+            {/* Cloud sync status badge */}
+            <div className={`flex items-center justify-center gap-2 py-2 px-4 rounded-xl text-sm font-semibold border ${
+              syncStatus === 'synced'
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                : syncStatus === 'error'
+                ? 'bg-rose-50 border-rose-200 text-rose-700'
+                : syncStatus === null
+                ? 'bg-slate-50 border-slate-200 text-slate-500 animate-pulse'
+                : 'bg-amber-50 border-amber-200 text-amber-700'
+            }`}>
+              {syncStatus === 'synced' ? (
+                <><Cloud className="w-4 h-4" /> {isHi ? '☁️ क्लाउड में सुरक्षित' : '☁️ Synced to cloud'}</>
+              ) : syncStatus === 'error' || syncStatus === 'offline' ? (
+                <><CloudOff className="w-4 h-4" /> {isHi ? '⚠️ ऑफलाइन — स्थानीय रूप से सहेजा' : '⚠️ Offline — saved locally'}</>
+              ) : (
+                <><Loader2 className="w-4 h-4 animate-spin" /> {isHi ? 'क्लाउड में सहेज रहे हैं…' : 'Syncing to cloud…'}</>
+              )}
+            </div>
+
             <button
               onClick={reset}
               className="kiosk-btn-primary w-full flex items-center justify-center gap-2"
@@ -90,6 +129,7 @@ export function SummaryScreen() {
               {isHi ? '(8 सेकंड में स्वतः रीसेट हो जाएगा)' : '(Auto-resets in 8 seconds)'}
             </p>
           </div>
+
         </div>
       </div>
     )
