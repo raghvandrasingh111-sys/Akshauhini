@@ -240,6 +240,7 @@ export function IdentityScreen() {
 
       setIdentity({
         patientId: patient.patientId,
+        databaseId: patient.databaseId,
         abhaId: verifiedProfile?.healthIdNumber || verifiedProfile?.healthId || abhaInput || undefined,
         abhaNumber: verifiedProfile?.healthIdNumber,
         abhaAddress: verifiedProfile?.healthId,

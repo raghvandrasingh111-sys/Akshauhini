@@ -147,6 +147,8 @@ export async function savePatientSummary(
   const intakeEntry = {
     id: `local_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
     patient_id: patientId,
+    patientId,
+    databaseId: patientId,
     language: input.language,
     answers: input.answers,
     documents: input.documents,
@@ -158,7 +160,10 @@ export async function savePatientSummary(
   }
 
   const existingIntakes = read<Array<Record<string, unknown>>>(PATIENT_INTAKES_KEY, [])
-  write(PATIENT_INTAKES_KEY, [intakeEntry, ...existingIntakes.filter((entry) => entry.patient_id !== patientId)])
+  write(PATIENT_INTAKES_KEY, [intakeEntry, ...existingIntakes.filter((entry) => {
+    const currentId = String((entry as Record<string, unknown>).patient_id ?? (entry as Record<string, unknown>).patientId ?? (entry as Record<string, unknown>).databaseId ?? '')
+    return currentId !== String(patientId)
+  })])
 
   if (supabase) {
     const { error } = await supabase.rpc('save_kiosk_intake', {

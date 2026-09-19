@@ -50,8 +50,9 @@ export function SummaryScreen() {
 
     setDone(true)
 
-    if (identity?.patientId) {
-      await savePatientSummary(identity.patientId, summary, {
+    const patientRecordId = identity?.databaseId ?? identity?.patientId
+    if (patientRecordId) {
+      await savePatientSummary(patientRecordId, summary, {
         language,
         answers: interviewAnswers,
         documents: summary.documents,

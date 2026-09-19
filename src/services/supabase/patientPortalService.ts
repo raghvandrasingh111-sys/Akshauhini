@@ -37,11 +37,22 @@ function readLocalPatientIntakes(patientId: string): PatientIntakeRecord[] {
   try {
     const raw = localStorage.getItem('sanjeevani_patient_intakes')
     if (!raw) return []
-    const parsed = JSON.parse(raw) as PatientIntakeRecord[]
-    return parsed.filter((entry) => entry && (
-      entry.id === patientId ||
-      entry.answers?.some((answer) => String(answer?.questionId ?? '').includes(patientId))
-    ))
+    const parsed = JSON.parse(raw) as Array<Record<string, unknown>>
+    return parsed
+      .filter((entry) => {
+        const entryId = String((entry as Record<string, unknown>).patient_id ?? (entry as Record<string, unknown>).patientId ?? (entry as Record<string, unknown>).databaseId ?? '')
+        return entryId === String(patientId)
+      })
+      .map((entry) => ({
+        id: String(entry.id ?? 'local_intake'),
+        language: String(entry.language ?? 'en'),
+        answers: Array.isArray(entry.answers) ? (entry.answers as PatientIntakeRecord['answers']) : [],
+        clinical_summary: (entry.clinical_summary as PatientIntakeRecord['clinical_summary']) ?? null,
+        red_flags: Array.isArray(entry.red_flags) ? (entry.red_flags as PatientIntakeRecord['red_flags']) : [],
+        is_emergency: Boolean(entry.is_emergency),
+        history_mode: String(entry.history_mode ?? 'allopathic'),
+        created_at: String(entry.created_at ?? new Date().toISOString()),
+      }))
   } catch {
     return []
   }

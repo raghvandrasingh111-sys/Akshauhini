@@ -29,6 +29,7 @@ export interface DoctorAccessRequest {
 
 export interface PatientIdentity {
   patientId?: string
+  databaseId?: string
   abhaId?: string
   abhaNumber?: string
   abhaAddress?: string
