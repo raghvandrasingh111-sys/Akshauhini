@@ -1,10 +1,11 @@
 import { FormEvent, useEffect, useState } from 'react'
-import { ArrowUpRight, Check, FileImage, FileText, HeartPulse, LockKeyhole, LogOut, ShieldCheck, UploadCloud } from 'lucide-react'
+import { ArrowUpRight, Check, FileImage, FileText, Fingerprint, HeartPulse, LockKeyhole, LogOut, ShieldCheck, UploadCloud } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { usePatientAuth } from '../context/PatientAuthContext'
 import { isValidPatientPhone, signInPatient, signUpPatient } from '../services/supabase/patientAuthService'
 import { getPatientConsentRequests, getPatientDocuments, respondToPatientConsent, uploadPatientDocument } from '../services/supabase/patientPortalService'
 import type { ConsentRequest, MedicalDocument } from '../types/database'
+import { abhaSdkService, type AbhaAuthMethod } from '../services/abhaSdkService'
 
 export function PatientPortalPage() {
   const { session, patient, loading } = usePatientAuth()
@@ -21,6 +22,11 @@ function PatientLogin() {
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
+  const [showAbha, setShowAbha] = useState(false)
+  const [abhaId, setAbhaId] = useState('')
+  const [abhaMethod, setAbhaMethod] = useState<AbhaAuthMethod>('MOBILE_OTP')
+  const [abhaTxn, setAbhaTxn] = useState<string | null>(null)
+  const [abhaOtp, setAbhaOtp] = useState('')
 
   const submit = async (event: FormEvent) => {
     event.preventDefault()
@@ -43,21 +49,52 @@ function PatientLogin() {
     }
   }
 
-  return <main className="min-h-screen bg-[#061A17] p-4 text-white md:p-8">
-    <div className="mx-auto grid min-h-[calc(100vh-4rem)] max-w-6xl overflow-hidden rounded-[2rem] border border-white/10 bg-[#0B2924] shadow-2xl lg:grid-cols-[1.05fr_0.95fr]">
-      <section className="relative overflow-hidden p-8 md:p-12">
-        <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-teal-400/15 blur-3xl" />
-        <div className="relative flex h-full flex-col justify-between">
-          <div><div className="flex items-center gap-3"><div className="rounded-2xl bg-teal-400 p-3 text-[#05221D]"><HeartPulse /></div><span className="text-lg font-bold tracking-[0.2em]">SANJEEVANI</span></div>
-            <div className="mt-24 max-w-lg"><p className="text-sm font-bold uppercase tracking-[0.24em] text-teal-300">Your health, your permission</p><h1 className="mt-4 text-5xl font-black leading-[0.95] tracking-tight md:text-7xl">Your care story, safely in your hands.</h1><p className="mt-6 max-w-md text-lg leading-relaxed text-teal-100/70">Keep your medical documents together, see who is asking for access, and decide exactly who can view your records.</p></div>
-          </div>
-          <div className="mt-16 flex flex-wrap gap-3 text-xs font-semibold text-teal-100/70"><span className="rounded-full border border-white/10 px-3 py-2">Encrypted account</span><span className="rounded-full border border-white/10 px-3 py-2">Consent-first access</span><span className="rounded-full border border-white/10 px-3 py-2">Private uploads</span></div>
-        </div>
+  const startAbhaLogin = async () => {
+    if (!abhaId.trim()) return setError('Enter your ABHA number or ABHA address.')
+    setBusy(true)
+    setError('')
+    try {
+      const result = await abhaSdkService.authInit({ authMethod: abhaMethod, healthid: abhaId.trim() })
+      setAbhaTxn(result.txnId)
+      setMessage('OTP sent. Enter it below to verify your ABHA identity.')
+    } catch (abhaError) {
+      setError(abhaError instanceof Error ? abhaError.message : 'ABHA verification could not start.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const confirmAbhaLogin = async () => {
+    if (!abhaTxn || abhaOtp.length < 6) return
+    setBusy(true)
+    setError('')
+    try {
+      const result = await abhaSdkService.confirmOtp({ txnId: abhaTxn, otp: abhaOtp }, abhaMethod)
+      const profile = await abhaSdkService.getAccountProfile(result.token)
+      setMessage(`ABHA verified for ${profile.name}. Continue with your password account to securely open the dashboard.`)
+      setShowAbha(false)
+      setAbhaTxn(null)
+      setPhone(profile.mobile ?? phone)
+      setMode('login')
+    } catch (abhaError) {
+      setError(abhaError instanceof Error ? abhaError.message : 'Invalid ABHA OTP.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return <main className="min-h-screen bg-[#EAF4F0] px-4 py-8 text-slate-900 md:py-14">
+    <div className="mx-auto max-w-md">
+      <div className="mb-7 text-center"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#0F5132] text-white shadow-lg"><HeartPulse className="h-7 w-7" /></div><p className="mt-4 text-xs font-bold uppercase tracking-[0.22em] text-teal-700">Sanjeevani patient space</p><h1 className="mt-2 text-3xl font-black tracking-tight">Your health, your control.</h1><p className="mt-2 text-sm text-slate-500">Sign in securely to manage records and approvals.</p></div>
+      <section className="rounded-[2rem] border border-white bg-white p-5 shadow-xl shadow-teal-900/10 md:p-7">
+        <div className="grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1"><button onClick={() => { setMode('login'); setError(''); setMessage('') }} className={`rounded-lg py-2.5 text-sm font-bold ${mode === 'login' ? 'bg-white text-teal-800 shadow-sm' : 'text-slate-500'}`}>Sign in</button><button onClick={() => { setMode('signup'); setError(''); setMessage('') }} className={`rounded-lg py-2.5 text-sm font-bold ${mode === 'signup' ? 'bg-white text-teal-800 shadow-sm' : 'text-slate-500'}`}>Sign up</button></div>
+        <form onSubmit={submit} className="mt-6 space-y-4"><label className="block text-xs font-bold uppercase tracking-wider text-slate-500">Mobile number<input value={phone} onChange={e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))} inputMode="numeric" placeholder="9876543210" className="mt-2 w-full rounded-xl border-2 border-slate-200 px-4 py-3.5 outline-none transition focus:border-teal-600" /></label><label className="block text-xs font-bold uppercase tracking-wider text-slate-500">Password<input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="At least 8 characters" className="mt-2 w-full rounded-xl border-2 border-slate-200 px-4 py-3.5 outline-none transition focus:border-teal-600" /></label>{mode === 'signup' && <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">Confirm password<input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className="mt-2 w-full rounded-xl border-2 border-slate-200 px-4 py-3.5 outline-none transition focus:border-teal-600" /></label>}{error && <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}{message && <p className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-700">{message}</p>}<button disabled={busy} className="w-full rounded-xl bg-[#0F5132] px-4 py-3.5 font-bold text-white shadow-lg shadow-teal-900/15 disabled:opacity-50">{busy ? 'Please wait...' : mode === 'login' ? 'Sign in securely' : 'Create secure account'}</button></form>
+        <div className="my-5 flex items-center gap-3 text-xs text-slate-400"><span className="h-px flex-1 bg-slate-200" />or<span className="h-px flex-1 bg-slate-200" /></div>
+        <button onClick={() => { setShowAbha(!showAbha); setError('') }} className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-teal-200 bg-teal-50 px-4 py-3.5 font-bold text-teal-800 transition hover:bg-teal-100"><Fingerprint className="h-5 w-5" />Fast login with ABHA</button>
+        {showAbha && <div className="mt-4 rounded-2xl border border-teal-200 bg-teal-50/70 p-4"><p className="text-sm font-bold text-slate-900">Verify your ABHA identity</p><p className="mt-1 text-xs text-slate-500">ABHA verification is fast; your password still protects the portal.</p><div className="mt-3 flex gap-2"><input value={abhaId} onChange={e => setAbhaId(e.target.value)} placeholder="ABHA number or address" className="min-w-0 flex-1 rounded-xl border border-teal-200 bg-white px-3 py-2.5 text-sm" /><select value={abhaMethod} onChange={e => setAbhaMethod(e.target.value as AbhaAuthMethod)} className="rounded-xl border border-teal-200 bg-white px-2 text-xs"><option value="MOBILE_OTP">Mobile OTP</option><option value="AADHAAR_OTP">Aadhaar OTP</option></select></div>{abhaTxn && <input value={abhaOtp} onChange={e => setAbhaOtp(e.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="Enter 6-digit OTP" className="mt-3 w-full rounded-xl border border-teal-200 bg-white px-3 py-2.5 text-sm" />}{abhaTxn ? <button onClick={() => void confirmAbhaLogin()} disabled={busy || abhaOtp.length < 6} className="mt-3 w-full rounded-xl bg-teal-700 px-3 py-2.5 text-sm font-bold text-white disabled:opacity-50">{busy ? 'Verifying...' : 'Confirm ABHA OTP'}</button> : <button onClick={() => void startAbhaLogin()} disabled={busy} className="mt-3 w-full rounded-xl bg-teal-700 px-3 py-2.5 text-sm font-bold text-white disabled:opacity-50">Send ABHA OTP</button>}</div>}
+        <button onClick={() => navigate('/')} className="mt-6 w-full text-sm text-slate-500 hover:text-slate-900">Back to kiosk</button>
       </section>
-      <section className="bg-white p-6 text-slate-900 md:p-12"><div className="mx-auto max-w-md pt-6 lg:pt-20"><div className="mb-8"><div className="flex items-center gap-2 text-teal-700"><LockKeyhole className="h-5 w-5" /><span className="text-xs font-bold uppercase tracking-[0.2em]">Protected patient portal</span></div><h2 className="mt-4 text-3xl font-black">{mode === 'login' ? 'Welcome back' : 'Create your secure account'}</h2><p className="mt-2 text-sm text-slate-500">Use your mobile number and a password. Your phone number alone is never enough.</p></div>
-        <form onSubmit={submit} className="space-y-4"><label className="block text-xs font-bold uppercase tracking-wider text-slate-500">Mobile number<input value={phone} onChange={e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))} inputMode="numeric" placeholder="9876543210" className="mt-2 w-full rounded-xl border-2 border-slate-200 px-4 py-3.5 outline-none focus:border-teal-600" /></label><label className="block text-xs font-bold uppercase tracking-wider text-slate-500">Password<input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="At least 8 characters" className="mt-2 w-full rounded-xl border-2 border-slate-200 px-4 py-3.5 outline-none focus:border-teal-600" /></label>{mode === 'signup' && <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">Confirm password<input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className="mt-2 w-full rounded-xl border-2 border-slate-200 px-4 py-3.5 outline-none focus:border-teal-600" /></label>}{error && <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}{message && <p className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-700">{message}</p>}<button disabled={busy} className="w-full rounded-xl bg-[#0F5132] px-4 py-4 font-bold text-white shadow-lg shadow-teal-900/15 disabled:opacity-50">{busy ? 'Securing account...' : mode === 'login' ? 'Unlock my portal' : 'Create patient account'}</button></form>
-        <button onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setError(''); setMessage('') }} className="mt-5 w-full text-center text-sm font-semibold text-teal-700">{mode === 'login' ? 'New here? Create an account' : 'Already registered? Sign in'}</button><button onClick={() => navigate('/')} className="mt-8 w-full text-sm text-slate-500 hover:text-slate-900">Back to kiosk</button>
-      </div></section>
+      <p className="mt-5 text-center text-xs text-slate-500"><LockKeyhole className="mr-1 inline h-3.5 w-3.5" /> Password protected · Consent first · Private records</p>
     </div></main>
 }
 
