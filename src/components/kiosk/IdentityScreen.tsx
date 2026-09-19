@@ -50,7 +50,6 @@ export function IdentityScreen() {
   const [showConfig, setShowConfig] = useState(false)
   const [useSimulation, setUseSimulation] = useState(abhaSdkService.getConfig().useSimulation)
   const [customHost, setCustomHost] = useState(abhaSdkService.getConfig().baseUrl)
-  const [bearerToken, setBearerToken] = useState(abhaSdkService.getConfig().bearerToken || '')
 
   // Countdown timer for OTP
   useEffect(() => {
@@ -66,7 +65,6 @@ export function IdentityScreen() {
     abhaSdkService.setConfig({
       useSimulation,
       baseUrl: customHost.trim(),
-      bearerToken: bearerToken.trim() || undefined,
     })
     setShowConfig(false)
   }
@@ -783,18 +781,6 @@ export function IdentityScreen() {
                   </span>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Gateway Bearer Token (Optional for Live Mode)
-                  </label>
-                  <input
-                    type="password"
-                    value={bearerToken}
-                    onChange={(e) => setBearerToken(e.target.value)}
-                    placeholder="eyJhbGciOi..."
-                    className="w-full text-xs font-mono px-3 py-2.5 rounded-lg border border-slate-300"
-                  />
-                </div>
               </div>
 
               <div className="flex gap-2 pt-2 border-t border-slate-100">
