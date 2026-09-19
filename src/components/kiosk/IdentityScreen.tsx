@@ -85,12 +85,12 @@ export function IdentityScreen() {
     setShowConfig(false)
   }
 
-  const findExistingPatient = () => {
+  const findExistingPatient = async () => {
     if (!isValidPhone(phone)) {
       setPhoneError('Enter a valid 10-digit Indian mobile number.')
       return
     }
-    const existing = getPatientByPhone(phone)
+    const existing = await getPatientByPhone(phone)
     setPatientRecord(existing)
     setAccessRequests(getAccessRequests(existing?.patientId ?? phone))
     setPhoneError(existing ? '' : 'No patient found. Complete the form to create a new Patient ID.')
@@ -201,45 +201,51 @@ export function IdentityScreen() {
   }
 
   // Final Continue to Consent Screen
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (!name || !age || !isValidPhone(phone)) {
       setPhoneError('A valid phone number is required to create your Patient ID.')
       return
     }
 
-    const patient = registerOrLoginPatient({
-      phone,
-      name,
-      age: parseInt(age, 10),
-      gender,
-      address: address || undefined,
-    })
+    try {
+      const patient = await registerOrLoginPatient({
+        phone,
+        name,
+        age: parseInt(age, 10),
+        gender,
+        address: address || undefined,
+        abhaNumber: verifiedProfile?.healthIdNumber,
+        abhaAddress: verifiedProfile?.healthId,
+      })
 
-    setIdentity({
-      patientId: patient.patientId,
-      abhaId: verifiedProfile?.healthIdNumber || verifiedProfile?.healthId || abhaInput || undefined,
-      abhaNumber: verifiedProfile?.healthIdNumber,
-      abhaAddress: verifiedProfile?.healthId,
-      name,
-      age: parseInt(age, 10),
-      gender,
-      phone: phone || undefined,
-      address: address || undefined,
-      district: verifiedProfile?.districtName,
-      state: verifiedProfile?.stateName,
-      pincode: verifiedProfile?.pincode,
-      profilePhoto: verifiedProfile?.profilePhoto,
-      qrCode: verifiedProfile?.qrCode,
-      isAbhaVerified: Boolean(verifiedProfile),
-      verificationMethod: verifiedProfile
-        ? authMethod === 'AADHAAR_OTP'
-          ? 'aadhaar_otp'
-          : 'mobile_otp'
-        : 'manual',
-      verificationTimestamp: verifiedProfile ? new Date().toISOString() : undefined,
-    })
+      setIdentity({
+        patientId: patient.patientId,
+        abhaId: verifiedProfile?.healthIdNumber || verifiedProfile?.healthId || abhaInput || undefined,
+        abhaNumber: verifiedProfile?.healthIdNumber,
+        abhaAddress: verifiedProfile?.healthId,
+        name,
+        age: parseInt(age, 10),
+        gender,
+        phone: phone || undefined,
+        address: address || undefined,
+        district: verifiedProfile?.districtName,
+        state: verifiedProfile?.stateName,
+        pincode: verifiedProfile?.pincode,
+        profilePhoto: verifiedProfile?.profilePhoto,
+        qrCode: verifiedProfile?.qrCode,
+        isAbhaVerified: Boolean(verifiedProfile),
+        verificationMethod: verifiedProfile
+          ? authMethod === 'AADHAAR_OTP'
+            ? 'aadhaar_otp'
+            : 'mobile_otp'
+          : 'manual',
+        verificationTimestamp: verifiedProfile ? new Date().toISOString() : undefined,
+      })
 
-    setStep('consent')
+      setStep('consent')
+    } catch (error) {
+      setPhoneError(error instanceof Error ? error.message : 'Unable to save patient registration.')
+    }
   }
 
   // Fast 1-click Demo Mode for Judges

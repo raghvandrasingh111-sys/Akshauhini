@@ -51,7 +51,14 @@ export function SummaryScreen() {
     setDone(true)
 
     if (identity?.patientId) {
-      savePatientSummary(identity.patientId, summary)
+      await savePatientSummary(identity.patientId, summary, {
+        language,
+        answers: interviewAnswers,
+        documents: summary.documents,
+        redFlags,
+        isEmergency,
+        historyMode,
+      })
     }
 
     // 2. Attempt cloud sync to Supabase

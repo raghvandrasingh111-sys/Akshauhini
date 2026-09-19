@@ -1,6 +1,8 @@
 import type { ClinicalSummary, DoctorAccessRequest, PatientIdentity } from '../types'
+import { supabase } from '../lib/supabase'
 
 export interface PatientRegistryRecord {
+  databaseId?: string
   patientId: string
   phone: string
   name: string
@@ -27,6 +29,25 @@ export function getPatientId(phone: string): string {
   return normalizePhone(phone)
 }
 
+function fromSupabasePatient(patient: Record<string, unknown>): PatientRegistryRecord {
+  return {
+    databaseId: String(patient.id),
+    patientId: String(patient.patient_id),
+    phone: String(patient.phone ?? patient.patient_id),
+    name: String(patient.full_name),
+    age: typeof patient.age === 'number'
+      ? patient.age
+      : patient.date_of_birth
+        ? new Date().getFullYear() - new Date(String(patient.date_of_birth)).getFullYear()
+        : 0,
+    gender: patient.gender === 'female' || patient.gender === 'other' ? patient.gender : 'male',
+    address: typeof patient.address === 'string' ? patient.address : undefined,
+    createdAt: String(patient.created_at),
+    updatedAt: String(patient.updated_at),
+    summaries: [],
+  }
+}
+
 function read<T>(key: string, fallback: T): T {
   try {
     const raw = localStorage.getItem(key)
@@ -40,21 +61,43 @@ function write<T>(key: string, value: T): void {
   localStorage.setItem(key, JSON.stringify(value))
 }
 
-export function getPatientByPhone(phone: string): PatientRegistryRecord | null {
+export async function getPatientByPhone(phone: string): Promise<PatientRegistryRecord | null> {
   const patientId = getPatientId(phone)
+  if (supabase) {
+    const { data, error } = await supabase.rpc('find_kiosk_patient', { p_patient_id: patientId })
+    if (!error && data) return fromSupabasePatient(data as Record<string, unknown>)
+    if (error) console.warn('[PatientRegistry] Supabase lookup failed:', error.message)
+  }
   return read<PatientRegistryRecord[]>(PATIENTS_KEY, []).find(
     (patient) => patient.patientId === patientId
   ) ?? null
 }
 
-export function registerOrLoginPatient(input: {
+export async function registerOrLoginPatient(input: {
   phone: string
   name: string
   age: number
   gender: PatientIdentity['gender']
   address?: string
-}): PatientRegistryRecord {
+  abhaNumber?: string
+  abhaAddress?: string
+}): Promise<PatientRegistryRecord> {
   const patientId = getPatientId(input.phone)
+  if (supabase) {
+    const { data, error } = await supabase.rpc('register_kiosk_patient', {
+      p_patient_id: patientId,
+      p_full_name: input.name,
+      p_age: input.age,
+      p_gender: input.gender,
+      p_phone: patientId,
+      p_address: input.address ?? null,
+      p_abha_number: input.abhaNumber ?? null,
+      p_abha_address: input.abhaAddress ?? null,
+      p_hospital_id: import.meta.env.VITE_DEFAULT_HOSPITAL_ID || null,
+    })
+    if (!error && data) return fromSupabasePatient(data as Record<string, unknown>)
+    if (error) console.warn('[PatientRegistry] Supabase registration failed:', error.message)
+  }
   const patients = read<PatientRegistryRecord[]>(PATIENTS_KEY, [])
   const existing = patients.find((patient) => patient.patientId === patientId)
   const now = new Date().toISOString()
@@ -76,7 +119,32 @@ export function registerOrLoginPatient(input: {
   return record
 }
 
-export function savePatientSummary(patientId: string, summary: ClinicalSummary): void {
+export async function savePatientSummary(
+  patientId: string,
+  summary: ClinicalSummary,
+  input: {
+    language: string
+    answers: unknown[]
+    documents: unknown[]
+    redFlags: unknown[]
+    isEmergency: boolean
+    historyMode: string
+  }
+): Promise<void> {
+  if (supabase) {
+    const { error } = await supabase.rpc('save_kiosk_intake', {
+      p_patient_id: patientId,
+      p_language: input.language,
+      p_answers: input.answers,
+      p_documents: input.documents,
+      p_clinical_summary: summary,
+      p_red_flags: input.redFlags,
+      p_is_emergency: input.isEmergency,
+      p_history_mode: input.historyMode,
+    })
+    if (!error) return
+    console.warn('[PatientRegistry] Supabase intake save failed:', error.message)
+  }
   const patients = read<PatientRegistryRecord[]>(PATIENTS_KEY, [])
   write(
     PATIENTS_KEY,
@@ -86,8 +154,13 @@ export function savePatientSummary(patientId: string, summary: ClinicalSummary):
   )
 }
 
-export function searchPatient(patientIdOrPhone: string): PatientRegistryRecord | null {
+export async function searchPatient(patientIdOrPhone: string): Promise<PatientRegistryRecord | null> {
   const patientId = getPatientId(patientIdOrPhone)
+  if (supabase) {
+    const { data, error } = await supabase.rpc('find_kiosk_patient', { p_patient_id: patientId })
+    if (!error && data) return fromSupabasePatient(data as Record<string, unknown>)
+    if (error) console.warn('[PatientRegistry] Supabase search failed:', error.message)
+  }
   return read<PatientRegistryRecord[]>(PATIENTS_KEY, []).find(
     (patient) => patient.patientId === patientId
   ) ?? null

@@ -19,8 +19,8 @@ export function DoctorAccessScreen() {
   const [purpose, setPurpose] = useState('Clinical consultation and continuity of care')
   const [error, setError] = useState('')
 
-  const findPatient = () => {
-    const result = searchPatient(patientId)
+  const findPatient = async () => {
+    const result = await searchPatient(patientId)
     setPatient(result)
     setRequests(result ? getAccessRequests(result.patientId) : [])
     setError(result ? '' : 'No patient found for this phone number or Patient ID.')
