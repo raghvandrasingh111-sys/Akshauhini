@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import {
   CheckCircle2,
   Send,
@@ -8,12 +9,15 @@ import {
   Loader2,
   Stethoscope,
   Activity,
+  UserCheck,
+  RefreshCw,
 } from 'lucide-react'
 import { useApp } from '../../context/AppContext'
 
 export function SummaryScreen() {
-  const { language, identity, summary, verifySummary, reset, isEmergency, geminiLoading } = useApp()
+  const { language, identity, summary, reset, isEmergency, geminiLoading } = useApp()
   const isHi = language === 'hi'
+  const [done, setDone] = useState(false)
 
   if (!summary) return null
 
@@ -29,13 +33,65 @@ export function SummaryScreen() {
   }
 
   const handleComplete = () => {
-    verifySummary()
     localStorage.setItem(
       'medikiosk_physician_summaries',
       JSON.stringify([
         summary,
         ...JSON.parse(localStorage.getItem('medikiosk_physician_summaries') || '[]'),
       ])
+    )
+    setDone(true)
+    // Auto-reset for next patient after 8 seconds
+    setTimeout(() => reset(), 8000)
+  }
+
+  // ── Completion / Thank-you screen ─────────────────────────────────
+  if (done) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-white flex items-center justify-center p-6">
+        <div className="max-w-md w-full text-center animate-slide-up">
+          <div className="w-24 h-24 rounded-full bg-emerald-500 flex items-center justify-center mx-auto mb-6 shadow-xl">
+            <UserCheck className="w-12 h-12 text-white" />
+          </div>
+          <h2 className="text-3xl font-bold text-slate-900 mb-2">
+            {isHi ? 'धन्यवाद! 🙏' : 'Thank You! 🙏'}
+          </h2>
+          <p className="text-lg text-slate-600 mb-1">
+            {identity?.name && <span className="font-semibold text-slate-800">{identity.name}</span>}
+          </p>
+          <p className="text-slate-500 mb-8">
+            {isHi
+              ? 'आपकी जानकारी सुरक्षित रूप से दर्ज हो गई। कृपया प्रतीक्षालय में बैठें — डॉक्टर जल्द बुलाएंगे।'
+              : 'Your health information has been securely recorded. Please take a seat in the waiting area — the doctor will call you shortly.'}
+          </p>
+
+          {/* Token number visual */}
+          <div className="mb-8 p-6 bg-white rounded-2xl border-2 border-emerald-200 shadow-md">
+            <p className="text-xs font-bold uppercase tracking-widest text-emerald-600 mb-1">
+              {isHi ? 'आपका टोकन नंबर' : 'Your Token Number'}
+            </p>
+            <p className="text-6xl font-black text-slate-900">
+              {String(Math.floor(Math.random() * 90) + 10).padStart(2, '0')}
+            </p>
+            <p className="text-sm text-slate-400 mt-2">
+              {isHi ? 'स्क्रीन पर अपना नंबर देखते रहें' : 'Watch the display screen for your number'}
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={reset}
+              className="kiosk-btn-primary w-full flex items-center justify-center gap-2"
+            >
+              <RefreshCw className="w-5 h-5" />
+              {isHi ? 'नया रोगी शुरू करें' : 'Start New Patient'}
+            </button>
+            <p className="text-xs text-slate-400">
+              {isHi ? '(8 सेकंड में स्वतः रीसेट हो जाएगा)' : '(Auto-resets in 8 seconds)'}
+            </p>
+          </div>
+        </div>
+      </div>
     )
   }
 

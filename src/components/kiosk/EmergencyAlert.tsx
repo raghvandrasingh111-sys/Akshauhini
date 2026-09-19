@@ -1,17 +1,46 @@
-import { AlertTriangle, Phone } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { AlertTriangle, Phone, X } from 'lucide-react'
 import type { RedFlag } from '../../types'
 
 interface EmergencyAlertProps {
   flags: RedFlag[]
   language: 'en' | 'hi'
+  onClose?: () => void
 }
 
-export function EmergencyAlert({ flags, language }: EmergencyAlertProps) {
+export function EmergencyAlert({ flags, language, onClose }: EmergencyAlertProps) {
+  const [secondsLeft, setSecondsLeft] = useState(3)
+
+  useEffect(() => {
+    if (flags.length === 0) return
+    const interval = setInterval(() => {
+      setSecondsLeft((s) => {
+        if (s <= 1) {
+          clearInterval(interval)
+          onClose?.()
+          return 0
+        }
+        return s - 1
+      })
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [flags.length, onClose])
+
   if (flags.length === 0) return null
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 animate-slide-up">
-      <div className="kiosk-card max-w-lg w-full border-4 border-medikiosk-emergency bg-medikiosk-emergency-light">
+      <div className="kiosk-card max-w-lg w-full border-4 border-medikiosk-emergency bg-medikiosk-emergency-light relative">
+
+        {/* Close button */}
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 p-1.5 rounded-full bg-medikiosk-emergency/10 hover:bg-medikiosk-emergency/20 text-medikiosk-emergency transition-colors"
+          aria-label="Close alert"
+        >
+          <X className="w-5 h-5" />
+        </button>
+
         <div className="flex items-center gap-4 mb-4">
           <div className="p-3 bg-medikiosk-emergency rounded-full emergency-pulse">
             <AlertTriangle className="w-8 h-8 text-white" />
@@ -57,6 +86,21 @@ export function EmergencyAlert({ flags, language }: EmergencyAlertProps) {
             </p>
           </div>
         </div>
+
+        {/* Auto-dismiss countdown bar */}
+        <div className="mt-4">
+          <div className="flex justify-between text-xs text-medikiosk-emergency/70 font-medium mb-1">
+            <span>{language === 'hi' ? 'स्वतः बंद हो जाएगा' : 'Auto-closing in'}</span>
+            <span>{secondsLeft}s</span>
+          </div>
+          <div className="w-full h-1.5 bg-medikiosk-emergency/20 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-medikiosk-emergency rounded-full transition-all duration-1000 ease-linear"
+              style={{ width: `${(secondsLeft / 3) * 100}%` }}
+            />
+          </div>
+        </div>
+
       </div>
     </div>
   )
