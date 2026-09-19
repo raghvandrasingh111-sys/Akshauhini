@@ -1,30 +1,29 @@
 import { FormEvent, useState } from 'react'
 import { Search, ShieldCheck } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { isValidAbhaNumber, normalizeAbhaNumber, searchPatientByABHA } from '../services/supabase/patientService'
+import { searchPatientByIdentifier } from '../services/supabase/patientService'
 import type { PatientRecord } from '../types/database'
 
 export function PatientSearchPage() {
   const navigate = useNavigate()
-  const [abha, setAbha] = useState('')
+  const [identifier, setIdentifier] = useState('')
   const [patient, setPatient] = useState<PatientRecord | null>(null)
   const [state, setState] = useState<'idle' | 'searching' | 'found' | 'not_found' | 'error'>('idle')
   const [message, setMessage] = useState('')
 
   async function handleSearch(event: FormEvent) {
     event.preventDefault()
-    const normalized = normalizeAbhaNumber(abha)
     setPatient(null)
-    if (!isValidAbhaNumber(normalized)) {
+    if (!identifier.trim()) {
       setState('error')
-      setMessage('Please enter a valid ABHA ID.')
+      setMessage('Enter a Patient ID, phone number, or ABHA ID.')
       return
     }
 
     setState('searching')
     setMessage('')
     try {
-      const result = await searchPatientByABHA(normalized)
+      const result = await searchPatientByIdentifier(identifier)
       if (!result) {
         setState('not_found')
         setMessage('Patient not found')
@@ -52,10 +51,10 @@ export function PatientSearchPage() {
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <form onSubmit={handleSearch} className="flex flex-col gap-3 sm:flex-row">
             <input
-              value={abha}
-              onChange={(event) => setAbha(event.target.value)}
-              placeholder="Enter 14-digit ABHA number"
-              aria-label="ABHA ID"
+              value={identifier}
+              onChange={(event) => setIdentifier(event.target.value)}
+              placeholder="Patient ID, phone, or ABHA number"
+              aria-label="Patient identifier"
               className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-[#0F5132] focus:bg-white"
             />
             <button type="submit" disabled={state === 'searching'} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#0F5132] px-5 py-3 text-sm font-medium text-white disabled:opacity-60">
@@ -81,7 +80,7 @@ export function PatientSearchPage() {
             </div>
           )}
 
-          {state === 'not_found' && <button type="button" onClick={() => { setAbha(''); setState('idle'); setMessage('') }} className="mt-4 text-sm font-medium text-[#0F5132]">Try another ABHA ID</button>}
+          {state === 'not_found' && <button type="button" onClick={() => { setIdentifier(''); setState('idle'); setMessage('') }} className="mt-4 text-sm font-medium text-[#0F5132]">Try another patient identifier</button>}
         </section>
       </div>
     </main>

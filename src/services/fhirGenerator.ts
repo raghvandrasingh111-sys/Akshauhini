@@ -85,7 +85,7 @@ export function generateClinicalSummary(
   const id = `summary_${Date.now()}`
   const summary: ClinicalSummary = {
     id,
-    patientId: identity.abhaId ?? identity.name,
+    patientId: identity.patientId ?? identity.abhaId ?? identity.name,
     createdAt: new Date().toISOString(),
     chiefComplaint,
     hpi: hpi || 'Details pending physician review',
@@ -122,7 +122,7 @@ function buildFHIRBundle(
       {
         resource: {
           resourceType: 'Patient',
-          id: identity.abhaId ?? 'patient-001',
+          id: identity.patientId ?? identity.abhaId ?? 'patient-001',
           identifier: [
             ...(identity.abhaNumber || identity.abhaId
               ? [

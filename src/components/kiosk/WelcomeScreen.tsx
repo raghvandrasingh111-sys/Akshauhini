@@ -2,6 +2,7 @@ import { HeartPulse, Shield, Languages } from 'lucide-react'
 import { useApp } from '../../context/AppContext'
 import type { Language } from '../../types'
 import { t } from '../../i18n'
+import { useNavigate } from 'react-router-dom'
 
 const LANGUAGES: { code: Language; label: string; native: string }[] = [
   { code: 'hi', label: 'Hindi', native: 'हिन्दी' },
@@ -13,6 +14,7 @@ const LANGUAGES: { code: Language; label: string; native: string }[] = [
 
 export function WelcomeScreen() {
   const { language, setLanguage, setStep } = useApp()
+  const navigate = useNavigate()
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-medikiosk-surface via-white to-teal-50 flex flex-col">
@@ -71,9 +73,14 @@ export function WelcomeScreen() {
             ))}
           </div>
 
-          <button onClick={() => setStep('identity')} className="kiosk-btn-primary w-full">
-            {t(language, 'welcome.continue')}
-          </button>
+          <div className="space-y-3">
+            <button onClick={() => setStep('identity')} className="kiosk-btn-primary w-full">
+              {t(language, 'welcome.continue')}
+            </button>
+            <button onClick={() => navigate('/doctor')} className="w-full py-3 rounded-xl border border-slate-300 text-slate-600 font-semibold hover:border-teal-500 hover:text-teal-700 transition-colors">
+              {t(language, 'welcome.doctorPortal')}
+            </button>
+          </div>
         </div>
       </main>
     </div>

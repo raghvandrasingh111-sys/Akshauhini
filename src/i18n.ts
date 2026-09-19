@@ -14,6 +14,7 @@ type TranslationKey =
   | 'welcome.subtitle'
   | 'welcome.chooseLanguage'
   | 'welcome.continue'
+  | 'welcome.doctorPortal'
   | 'identity.title'
   | 'identity.abhaTab'
   | 'identity.manualTab'
@@ -26,6 +27,11 @@ type TranslationKey =
   | 'identity.other'
   | 'identity.proceed'
   | 'identity.back'
+  | 'identity.phoneLogin'
+  | 'identity.phone'
+  | 'identity.findPatient'
+  | 'identity.patientId'
+  | 'identity.newPatientHint'
   | 'consent.title'
   | 'consent.listen'
   | 'consent.continue'
@@ -74,6 +80,7 @@ const translations: Record<TranslationKey, Record<Language, string>> = {
   'welcome.subtitle': { en: 'Select your language to begin intake', hi: 'अपनी भाषा चुनें और शुरू करें', ta: 'உங்கள் மொழியைத் தேர்ந்தெடுத்து தொடங்குங்கள்', te: 'మీ భాషను ఎంచుకుని ప్రారంభించండి', bn: 'আপনার ভাষা বেছে নিয়ে শুরু করুন' },
   'welcome.chooseLanguage': { en: 'Choose Language', hi: 'भाषा चुनें', ta: 'மொழியைத் தேர்ந்தெடுக்கவும்', te: 'భాషను ఎంచుకోండి', bn: 'ভাষা বেছে নিন' },
   'welcome.continue': { en: 'Continue →', hi: 'आगे बढ़ें →', ta: 'தொடரவும் →', te: 'కొనసాగించండి →', bn: 'এগিয়ে যান →' },
+  'welcome.doctorPortal': { en: 'Doctor Access Portal', hi: 'डॉक्टर एक्सेस पोर्टल', ta: 'மருத்துவர் அணுகல் போர்டல்', te: 'డాక్టర్ యాక్సెస్ పోర్టల్', bn: 'ডাক্তার অ্যাক্সেস পোর্টাল' },
   'identity.title': { en: 'Patient Identity & Verification', hi: 'रोगी पहचान सत्यापन', ta: 'நோயாளி அடையாளம் மற்றும் சரிபார்ப்பு', te: 'రోగి గుర్తింపు మరియు ధృవీకరణ', bn: 'রোগীর পরিচয় ও যাচাই' },
   'identity.abhaTab': { en: 'ABDM ABHA Verification', hi: 'ABHA से सत्यापन', ta: 'ABDM ABHA சரிபார்ப்பு', te: 'ABDM ABHA ధృవీకరణ', bn: 'ABDM ABHA যাচাই' },
   'identity.manualTab': { en: 'Manual Entry (No ABHA)', hi: 'मैन्युअल प्रविष्टि', ta: 'கைமுறை பதிவு', te: 'మాన్యువల్ నమోదు', bn: 'ম্যানুয়াল এন্ট্রি' },
@@ -86,6 +93,11 @@ const translations: Record<TranslationKey, Record<Language, string>> = {
   'identity.other': { en: 'Other', hi: 'अन्य', ta: 'மற்றவை', te: 'ఇతరులు', bn: 'অন্যান্য' },
   'identity.proceed': { en: 'Proceed to Consent Screen', hi: 'सहमति स्क्रीन पर आगे बढ़ें', ta: 'ஒப்புதல் திரைக்குச் செல்லவும்', te: 'సమ్మతి స్క్రీన్‌కు వెళ్లండి', bn: 'সম্মতি স্ক্রিনে যান' },
   'identity.back': { en: 'Back to Welcome Screen', hi: 'प्रारंभिक स्क्रीन पर वापस जाएं', ta: 'வரவேற்புத் திரைக்குத் திரும்பு', te: 'స్వాగత స్క్రీన్‌కు తిరిగి వెళ్ళండి', bn: 'স্বাগত স্ক্রিনে ফিরে যান' },
+  'identity.phoneLogin': { en: 'Phone Sign Up / Login', hi: 'फोन से साइन अप / लॉगिन', ta: 'தொலைபேசி பதிவு / உள்நுழைவு', te: 'ఫోన్ సైన్ అప్ / లాగిన్', bn: 'ফোন সাইন আপ / লগইন' },
+  'identity.phone': { en: 'Mobile Number (required)', hi: 'मोबाइल नंबर (अनिवार्य)', ta: 'மொபைல் எண் (தேவை)', te: 'మొబైల్ నంబర్ (అవసరం)', bn: 'মোবাইল নম্বর (প্রয়োজনীয়)' },
+  'identity.findPatient': { en: 'Find Existing Patient', hi: 'मौजूदा रोगी खोजें', ta: 'ஏற்கனவே உள்ள நோயாளியைத் தேடுங்கள்', te: 'ఇప్పటికే ఉన్న రోగిని కనుగొనండి', bn: 'বিদ্যমান রোগী খুঁজুন' },
+  'identity.patientId': { en: 'Your Patient ID', hi: 'आपकी रोगी आईडी', ta: 'உங்கள் நோயாளர் ID', te: 'మీ రోగి ID', bn: 'আপনার রোগী ID' },
+  'identity.newPatientHint': { en: 'New patients receive a unique ID based on their mobile number.', hi: 'नए रोगियों को मोबाइल नंबर से एक यूनिक आईडी मिलेगी।', ta: 'புதிய நோயாளிகளுக்கு மொபைல் எண்ணின் அடிப்படையில் தனிப்பட்ட ID கிடைக்கும்.', te: 'కొత్త రోగులకు మొబైల్ నంబర్ ఆధారంగా ప్రత్యేక ID లభిస్తుంది.', bn: 'নতুন রোগীরা মোবাইল নম্বরের ভিত্তিতে একটি ইউনিক ID পাবেন।' },
   'consent.title': { en: 'Consent & Privacy', hi: 'सहमति और गोपनीयता', ta: 'ஒப்புதல் மற்றும் தனியுரிமை', te: 'సమ్మతి మరియు గోప్యత', bn: 'সম্মতি ও গোপনীয়তা' },
   'consent.listen': { en: 'Listen to Consent (Audio)', hi: 'ऑडियो में सुनें', ta: 'ஒப்புதலைக் கேளுங்கள்', te: 'సమ్మతిని వినండి', bn: 'সম্মতি শুনুন' },
   'consent.continue': { en: 'Grant Consent & Continue', hi: 'सहमति दें और जारी रखें', ta: 'ஒப்புதல் அளித்து தொடரவும்', te: 'సమ్మతి ఇచ్చి కొనసాగించండి', bn: 'সম্মতি দিয়ে এগিয়ে যান' },

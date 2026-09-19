@@ -17,6 +17,7 @@ import {
 import { useApp } from '../../context/AppContext'
 import { saveIntakeToSupabase, type SyncStatus } from '../../services/supabaseService'
 import { LANGUAGE_LOCALES, t } from '../../i18n'
+import { savePatientSummary } from '../../services/patientRegistryService'
 
 export function SummaryScreen() {
   const { language, identity, summary, reset, isEmergency, geminiLoading, interviewAnswers, redFlags, historyMode } = useApp()
@@ -48,6 +49,10 @@ export function SummaryScreen() {
     )
 
     setDone(true)
+
+    if (identity?.patientId) {
+      savePatientSummary(identity.patientId, summary)
+    }
 
     // 2. Attempt cloud sync to Supabase
     if (identity) {

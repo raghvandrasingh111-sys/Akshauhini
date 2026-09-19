@@ -12,6 +12,9 @@ import {
   Settings,
   X,
   ExternalLink,
+  Search,
+  UserRoundPlus,
+  KeyRound,
 } from 'lucide-react'
 import { useApp } from '../../context/AppContext'
 import {
@@ -22,13 +25,22 @@ import {
   type AbhaAccountProfile,
 } from '../../services/abhaSdkService'
 import { t } from '../../i18n'
+import {
+  getAccessRequests,
+  getPatientByPhone,
+  isValidPhone,
+  registerOrLoginPatient,
+  respondToAccessRequest,
+  type PatientRegistryRecord,
+} from '../../services/patientRegistryService'
+import type { DoctorAccessRequest } from '../../types'
 
 export function IdentityScreen() {
   const { language, setIdentity, setStep } = useApp()
   const isHi = language === 'hi'
 
   // Input & Form State
-  const [tab, setTab] = useState<'abha' | 'manual'>('abha')
+  const [tab, setTab] = useState<'abha' | 'manual'>('manual')
   const [abhaInput, setAbhaInput] = useState('')
   const [authMethod, setAuthMethod] = useState<AbhaAuthMethod>('AADHAAR_OTP')
   
@@ -46,6 +58,9 @@ export function IdentityScreen() {
   const [gender, setGender] = useState<'male' | 'female' | 'other'>('male')
   const [phone, setPhone] = useState('')
   const [address, setAddress] = useState('')
+  const [patientRecord, setPatientRecord] = useState<PatientRegistryRecord | null>(null)
+  const [accessRequests, setAccessRequests] = useState<DoctorAccessRequest[]>([])
+  const [phoneError, setPhoneError] = useState('')
 
   // Sandbox / Live settings modal
   const [showConfig, setShowConfig] = useState(false)
@@ -68,6 +83,30 @@ export function IdentityScreen() {
       baseUrl: customHost.trim(),
     })
     setShowConfig(false)
+  }
+
+  const findExistingPatient = () => {
+    if (!isValidPhone(phone)) {
+      setPhoneError('Enter a valid 10-digit Indian mobile number.')
+      return
+    }
+    const existing = getPatientByPhone(phone)
+    setPatientRecord(existing)
+    setAccessRequests(getAccessRequests(existing?.patientId ?? phone))
+    setPhoneError(existing ? '' : 'No patient found. Complete the form to create a new Patient ID.')
+    if (existing) {
+      setName(existing.name)
+      setAge(String(existing.age))
+      setGender(existing.gender)
+      setAddress(existing.address ?? '')
+    }
+  }
+
+  const respondToRequest = (requestId: string, status: 'approved' | 'denied') => {
+    respondToAccessRequest(requestId, status)
+    setAccessRequests((requests) => requests.map((request) => request.id === requestId
+      ? { ...request, status, respondedAt: new Date().toISOString() }
+      : request))
   }
 
   // Quick Preset Selector for Hackathon Judges
@@ -163,9 +202,21 @@ export function IdentityScreen() {
 
   // Final Continue to Consent Screen
   const handleContinue = () => {
-    if (!name || !age) return
+    if (!name || !age || !isValidPhone(phone)) {
+      setPhoneError('A valid phone number is required to create your Patient ID.')
+      return
+    }
+
+    const patient = registerOrLoginPatient({
+      phone,
+      name,
+      age: parseInt(age, 10),
+      gender,
+      address: address || undefined,
+    })
 
     setIdentity({
+      patientId: patient.patientId,
       abhaId: verifiedProfile?.healthIdNumber || verifiedProfile?.healthId || abhaInput || undefined,
       abhaNumber: verifiedProfile?.healthIdNumber,
       abhaAddress: verifiedProfile?.healthId,
@@ -274,9 +325,70 @@ export function IdentityScreen() {
             }`}
           >
             <CreditCard className="w-4 h-4 text-slate-400" />
-            {t(language, 'identity.manualTab')}
+            <><UserRoundPlus className="w-4 h-4" /> {t(language, 'identity.phoneLogin')}</>
           </button>
         </div>
+
+        {tab === 'manual' && (
+          <div className="mb-6 p-5 rounded-2xl border-2 border-teal-200 bg-teal-50/60 space-y-3">
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-xl bg-teal-600 text-white">
+                <KeyRound className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-900">{t(language, 'identity.phoneLogin')}</h3>
+                <p className="text-xs text-slate-600 mt-1">{t(language, 'identity.newPatientHint')}</p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="tel"
+                value={phone}
+                onChange={(event) => {
+                  setPhone(event.target.value.replace(/\D/g, '').slice(0, 10))
+                  setPhoneError('')
+                }}
+                placeholder="10-digit mobile number"
+                className="flex-1 px-4 py-3 rounded-xl border-2 border-teal-300 focus:border-teal-600 focus:outline-none text-base"
+              />
+              <button
+                type="button"
+                onClick={findExistingPatient}
+                className="px-4 rounded-xl bg-white border-2 border-teal-600 text-teal-800 font-semibold flex items-center gap-2"
+              >
+                <Search className="w-4 h-4" />
+                {t(language, 'identity.findPatient')}
+              </button>
+            </div>
+            {phoneError && <p className="text-xs text-rose-600 font-medium">{phoneError}</p>}
+            {patientRecord && (
+              <div className="p-3 rounded-xl bg-white border border-emerald-200 text-sm">
+                <p className="font-semibold text-emerald-800">Existing patient found: {patientRecord.name}</p>
+                <p className="text-xs text-slate-600 mt-1">{t(language, 'identity.patientId')}: <span className="font-mono font-bold">{patientRecord.patientId}</span></p>
+              </div>
+            )}
+            {accessRequests.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-700">Doctor access requests</p>
+                {accessRequests.map((request) => (
+                  <div key={request.id} className="p-3 rounded-xl bg-white border border-amber-200 flex items-center justify-between gap-3">
+                    <div className="text-xs">
+                      <p className="font-bold text-slate-800">{request.doctorName} · {request.facility}</p>
+                      <p className="text-slate-600 mt-0.5">{request.purpose}</p>
+                      <p className="text-slate-500 mt-1 capitalize">Status: {request.status}</p>
+                    </div>
+                    {request.status === 'pending' && (
+                      <div className="flex gap-2 shrink-0">
+                        <button type="button" onClick={() => respondToRequest(request.id, 'approved')} className="px-3 py-2 rounded-lg bg-emerald-600 text-white text-xs font-bold">Approve</button>
+                        <button type="button" onClick={() => respondToRequest(request.id, 'denied')} className="px-3 py-2 rounded-lg border border-rose-300 text-rose-700 text-xs font-bold">Deny</button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* TAB 1: ABDM ABHA VERIFICATION */}
         {tab === 'abha' && (
@@ -566,7 +678,7 @@ export function IdentityScreen() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">
-                {isHi ? 'मोबाइल नंबर (वैकल्पिक)' : 'Mobile Phone (Optional)'}
+                {t(language, 'identity.phone')}
               </label>
               <input
                 type="tel"
@@ -575,6 +687,18 @@ export function IdentityScreen() {
                 placeholder="9829012345"
                 className="w-full px-4 py-3 rounded-xl border-2 border-medikiosk-border focus:border-medikiosk-primary focus:outline-none text-base"
               />
+              {tab === 'manual' && (
+                <div className="mt-2 flex items-center justify-between gap-3">
+                  <p className="text-xs text-slate-500">{t(language, 'identity.newPatientHint')}</p>
+                  <button
+                    type="button"
+                    onClick={findExistingPatient}
+                    className="text-xs font-semibold text-teal-700 hover:underline whitespace-nowrap"
+                  >
+                    <Search className="w-3.5 h-3.5 inline mr-1" />{t(language, 'identity.findPatient')}
+                  </button>
+                </div>
+              )}
             </div>
 
             <div>
@@ -596,7 +720,7 @@ export function IdentityScreen() {
         <div className="flex flex-col gap-3 mt-8">
           <button
             onClick={handleContinue}
-            disabled={!name || !age}
+            disabled={!name || !age || !isValidPhone(phone)}
             className="kiosk-btn-primary w-full py-4 text-lg font-bold flex items-center justify-center gap-2"
           >
             {t(language, 'identity.proceed')} →

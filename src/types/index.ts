@@ -11,8 +11,24 @@ export type KioskStep =
   | 'documents'
   | 'summary'
   | 'complete'
+  | 'doctor-access'
+
+export type AccessRequestStatus = 'pending' | 'approved' | 'denied'
+
+export interface DoctorAccessRequest {
+  id: string
+  patientId: string
+  doctorId: string
+  doctorName: string
+  facility: string
+  purpose: string
+  status: AccessRequestStatus
+  createdAt: string
+  respondedAt?: string
+}
 
 export interface PatientIdentity {
+  patientId?: string
   abhaId?: string
   abhaNumber?: string
   abhaAddress?: string
