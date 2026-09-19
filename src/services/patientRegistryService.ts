@@ -31,9 +31,15 @@ export function getPatientId(phone: string): string {
 }
 
 function fromSupabasePatient(patient: Record<string, unknown>): PatientRegistryRecord {
+  const defaultHospitalId = typeof import.meta.env.VITE_DEFAULT_HOSPITAL_ID === 'string'
+    ? import.meta.env.VITE_DEFAULT_HOSPITAL_ID.trim()
+    : ''
+
   return {
     databaseId: String(patient.id),
-    hospitalId: typeof patient.hospital_id === 'string' ? patient.hospital_id : undefined,
+    hospitalId: typeof patient.hospital_id === 'string' && patient.hospital_id.trim()
+      ? patient.hospital_id
+      : (defaultHospitalId || undefined),
     patientId: String(patient.patient_id),
     phone: String(patient.phone ?? patient.patient_id),
     name: String(patient.full_name),

@@ -237,9 +237,20 @@ function PatientDashboard() {
   if (!patient?.databaseId) return <CenteredMessage text="Your patient profile is not linked yet. Complete registration at the kiosk first." />
 
   const upload = async () => {
-    if (!selectedFile || !patient.hospitalId || !patient.databaseId) { setMessage('Your hospital link is missing. Please contact the clinic desk.'); return }
+    if (!selectedFile || !patient.databaseId) {
+      setMessage('Select a file and make sure your patient profile is linked before uploading.');
+      return
+    }
+
+    const hospitalId = patient.hospitalId || import.meta.env.VITE_DEFAULT_HOSPITAL_ID || 'default-hospital'
+
     try {
-      const doc = await uploadPatientDocument({ file: selectedFile, hospitalId: patient.hospitalId, patientId: patient.databaseId, documentType })
+      const doc = await uploadPatientDocument({
+        file: selectedFile,
+        hospitalId,
+        patientId: patient.databaseId,
+        documentType,
+      })
       setDocuments(current => [doc, ...current]); setSelectedFile(null); setMessage('Document uploaded securely.')
     } catch (error) { setMessage(error instanceof Error ? error.message : 'Upload failed') }
   }

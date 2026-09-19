@@ -85,8 +85,9 @@ export async function uploadPatientDocument(params: {
   documentType: MedicalDocument['document_type']
 }) {
   const client = requireSupabase()
+  const effectiveHospitalId = params.hospitalId?.trim() || import.meta.env.VITE_DEFAULT_HOSPITAL_ID?.trim() || 'default-hospital'
   const extension = params.file.name.split('.').pop()?.toLowerCase() ?? 'bin'
-  const path = `${params.hospitalId}/${params.patientId}/patient-${crypto.randomUUID()}.${extension}`
+  const path = `${effectiveHospitalId}/${params.patientId}/patient-${crypto.randomUUID()}.${extension}`
   const upload = await client.storage.from('medical-documents').upload(path, params.file, {
     upsert: false,
     contentType: params.file.type,
