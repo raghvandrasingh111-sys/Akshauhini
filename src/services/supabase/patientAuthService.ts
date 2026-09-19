@@ -24,6 +24,38 @@ export async function signInPatientWithGoogle() {
   })
 }
 
+export async function signUpPatientWithEmail(email: string, password: string) {
+  if (!supabase) return { data: { user: null, session: null }, error: new Error('Supabase is not configured') }
+  return supabase.auth.signUp({ email: email.trim().toLowerCase(), password })
+}
+
+export async function signInPatientWithEmail(email: string, password: string) {
+  if (!supabase) return { data: { user: null, session: null }, error: new Error('Supabase is not configured') }
+  return supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password })
+}
+
+export async function registerEmailPatient(input: {
+  aadhaarNumber: string
+  fullName: string
+  age: number
+  gender: 'male' | 'female' | 'other'
+  phone: string
+  email: string
+}) {
+  if (!supabase) throw new Error('Supabase is not configured')
+  const { data, error } = await supabase.rpc('register_email_patient', {
+    p_aadhaar_number: input.aadhaarNumber,
+    p_full_name: input.fullName,
+    p_age: input.age,
+    p_gender: input.gender,
+    p_phone: input.phone,
+    p_email: input.email.trim().toLowerCase(),
+    p_hospital_id: import.meta.env.VITE_DEFAULT_HOSPITAL_ID || null,
+  })
+  if (error) throw error
+  return data
+}
+
 export async function registerGooglePatient(input: {
   aadhaarNumber: string
   fullName: string
