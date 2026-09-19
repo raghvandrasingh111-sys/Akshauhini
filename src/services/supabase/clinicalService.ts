@@ -61,18 +61,20 @@ export async function writeAuditLog(params: {
   entityType: string
   entityId?: string
   metadata?: Record<string, unknown>
-}) {
+}): Promise<void> {
   const client = requireSupabase()
   const user = await client.auth.getUser()
   if (!user.data.user) throw new Error('Authenticated doctor required')
   const { error } = await client.from('audit_logs').insert({
-    actor_user_id: user.data.user.id,
-    actor_id: null,
+    actor_id: user.data.user.id,
     patient_id: params.patientId ?? null,
     action: params.action,
     entity_type: params.entityType,
     entity_id: params.entityId ?? null,
     metadata: params.metadata ?? {},
   })
-  if (error) throw error
+  if (error) {
+    // Audit failure must not block patient identity and consent workflows.
+    console.error('[ClinicalService] Audit log write failed:', error.message)
+  }
 }

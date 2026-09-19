@@ -1,18 +1,12 @@
-import { createClient } from '@supabase/supabase-js'
 import type {
   ClinicalSummary,
   PatientIdentity,
   InterviewAnswer,
   RedFlag,
 } from '../types'
+import { supabase } from '../lib/supabase'
 
 // ─── Supabase client (singleton) ─────────────────────────────────────────────
-
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
-
-export const supabase =
-  supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

@@ -37,7 +37,9 @@ export function PatientProfilePage() {
         if (!active) return
         setPatient(result)
         setCurrentVisit(visit)
-        await writeAuditLog({ patientId: result.id, action: 'PATIENT_ACCESSED', entityType: 'patient', entityId: result.id })
+        void writeAuditLog({ patientId: result.id, action: 'PATIENT_ACCESSED', entityType: 'patient', entityId: result.id }).catch((error: unknown) => {
+          console.error('[PatientProfile] Audit log unavailable:', error)
+        })
         setConsent((consentResult.data as ConsentRequest | null) ?? null)
         if (consentResult.data?.status === 'granted') {
           const timeline = await getPatientTimeline(result.id)
