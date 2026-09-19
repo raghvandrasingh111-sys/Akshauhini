@@ -1,8 +1,18 @@
-import { CheckCircle2, Send, Volume2, AlertTriangle, ShieldCheck } from 'lucide-react'
+import {
+  CheckCircle2,
+  Send,
+  Volume2,
+  AlertTriangle,
+  ShieldCheck,
+  Sparkles,
+  Loader2,
+  Stethoscope,
+  Activity,
+} from 'lucide-react'
 import { useApp } from '../../context/AppContext'
 
 export function SummaryScreen() {
-  const { language, identity, summary, verifySummary, reset, isEmergency } = useApp()
+  const { language, identity, summary, verifySummary, reset, isEmergency, geminiLoading } = useApp()
   const isHi = language === 'hi'
 
   if (!summary) return null
@@ -10,8 +20,8 @@ export function SummaryScreen() {
   const speakSummary = () => {
     if ('speechSynthesis' in window) {
       const text = isHi
-        ? `आपकी जानकारी सफलतापूर्वक दर्ज हो गई। मुख्य शिकायत: ${summary.chiefComplaint}`
-        : `Your information has been recorded. Chief complaint: ${summary.chiefComplaint}`
+        ? `आपकी जानकारी सफलतापूर्वक दर्ज हो गई। मुख्य शिकायत: ${summary.chiefComplaint}. ${summary.geminiAnalysis?.clinicalImpression || ''}`
+        : `Your information has been recorded. Chief complaint: ${summary.chiefComplaint}. ${summary.geminiAnalysis?.clinicalImpression || ''}`
       const utterance = new SpeechSynthesisUtterance(text)
       utterance.lang = isHi ? 'hi-IN' : 'en-IN'
       speechSynthesis.speak(utterance)
@@ -28,6 +38,8 @@ export function SummaryScreen() {
       ])
     )
   }
+
+  const gemini = summary.geminiAnalysis
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-medikiosk-surface via-white to-teal-50 p-4 md:p-6">
@@ -85,6 +97,126 @@ export function SummaryScreen() {
             </p>
           </div>
         )}
+
+        {/* Gemini AI Clinical Key Points Section */}
+        <div className="mb-6 p-5 rounded-2xl border-2 border-indigo-200 bg-gradient-to-br from-indigo-50/70 via-purple-50/40 to-white shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center shadow-sm">
+                <Sparkles className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="font-bold text-indigo-950 text-base flex items-center gap-1.5">
+                  <span>{isHi ? 'जेमिनी एआई: डॉक्टर के लिए मुख्य बिंदु' : 'Gemini AI: Clinical Key Points for Doctor'}</span>
+                  <span className="text-[10px] font-mono uppercase bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full border border-indigo-200">
+                    Clinical Co-Pilot
+                  </span>
+                </h3>
+              </div>
+            </div>
+
+            {gemini && (
+              <span
+                className={`text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider shadow-sm flex items-center gap-1 ${
+                  gemini.urgencyLevel === 'Emergency'
+                    ? 'bg-rose-100 text-rose-800 border border-rose-300'
+                    : gemini.urgencyLevel === 'Urgent'
+                    ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                    : 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                }`}
+              >
+                <Activity className="w-3.5 h-3.5" />
+                {gemini.urgencyLevel}
+              </span>
+            )}
+          </div>
+
+          {geminiLoading ? (
+            <div className="py-6 flex flex-col items-center justify-center gap-3 text-indigo-600">
+              <Loader2 className="w-8 h-8 animate-spin" />
+              <p className="text-sm font-medium">
+                {isHi
+                  ? 'जेमिनी एआई लक्षणों का विश्लेषण कर डॉक्टर के लिए नोट्स बना रहा है…'
+                  : 'Gemini AI is analyzing symptoms & synthesizing doctor key points…'}
+              </p>
+            </div>
+          ) : gemini ? (
+            <div className="space-y-4 text-sm mt-3">
+              <div className="p-3 bg-white rounded-xl border border-indigo-100 shadow-sm">
+                <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 block mb-1">
+                  {isHi ? 'नैदानिक निष्कर्ष (Clinical Impression)' : 'Clinical Impression'}
+                </span>
+                <p className="text-slate-900 font-medium leading-relaxed">{gemini.clinicalImpression}</p>
+                <p className="text-xs text-slate-500 mt-1 italic">Note: {gemini.urgencyReason}</p>
+              </div>
+
+              {/* Key Findings */}
+              {gemini.keyFindings && gemini.keyFindings.length > 0 && (
+                <div>
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-600 block mb-1.5">
+                    {isHi ? 'मुख्य बिंदु (Key Findings)' : 'Key Findings'}
+                  </span>
+                  <ul className="space-y-1 bg-white/80 p-3 rounded-xl border border-indigo-50">
+                    {gemini.keyFindings.map((kf, idx) => (
+                      <li key={idx} className="flex items-start gap-2 text-slate-800 text-xs sm:text-sm">
+                        <span className="text-indigo-500 font-bold">•</span>
+                        <span>{kf}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Differential Diagnoses */}
+              {gemini.differentialDiagnoses && gemini.differentialDiagnoses.length > 0 && (
+                <div>
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-600 block mb-1.5">
+                    {isHi ? 'संभावित निदान (Differential Diagnoses)' : 'Differential Diagnoses'}
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {gemini.differentialDiagnoses.slice(0, 2).map((diff, idx) => (
+                      <div key={idx} className="p-2.5 bg-white rounded-xl border border-indigo-100 text-xs">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-bold text-slate-800">{diff.condition}</span>
+                          <span
+                            className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                              diff.likelihood === 'High'
+                                ? 'bg-rose-100 text-rose-700'
+                                : 'bg-amber-100 text-amber-700'
+                            }`}
+                          >
+                            {diff.likelihood}
+                          </span>
+                        </div>
+                        <p className="text-slate-600 leading-tight">{diff.reason}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Recommended Workup */}
+              {gemini.recommendedWorkup && gemini.recommendedWorkup.length > 0 && (
+                <div className="p-3 bg-white/90 rounded-xl border border-indigo-100">
+                  <span className="text-xs font-bold uppercase tracking-wider text-indigo-700 flex items-center gap-1 mb-1.5">
+                    <Stethoscope className="w-3.5 h-3.5" />
+                    {isHi ? 'डॉक्टर के लिए सुझाई गई जांचें (Recommended Workup)' : 'Recommended Diagnostic Workup'}
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {gemini.recommendedWorkup.map((test, idx) => (
+                      <span
+                        key={idx}
+                        className="text-xs px-2.5 py-1 bg-indigo-50 text-indigo-900 border border-indigo-200 rounded-lg font-medium"
+                      >
+                        {test}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : null}
+        </div>
 
         <div className="space-y-4 mb-6">
           <SummarySection label={isHi ? 'मुख्य शिकायत' : 'Chief Complaint'} value={summary.chiefComplaint} />

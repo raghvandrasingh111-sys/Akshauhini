@@ -6,11 +6,9 @@ import { VoiceIndicator } from '../ui/VoiceIndicator'
 import { EmergencyAlert } from './EmergencyAlert'
 
 const DEMO_PHRASES: Record<string, string> = {
-  cc_main: '3 din se severe chest pain aur saans phul rahi hai',
-  hpi_aggravating: 'Chalne se badh jata hai',
-  hpi_relieving: 'Aaram karne se thoda kam hota hai',
-  med_current: 'Metformin aur BP ki dawai',
-  allergy: 'Penicillin se allergy',
+  cc_main: '3 din se severe chest pain aur saans phul rahi hai, thanda paseena aa raha hai',
+  med_current: 'Metformin 500mg aur BP ki goli (Amlodipine)',
+  allergy: 'Penicillin se daane aate hain (Allergy)',
   past_surgery: 'Appendix surgery 2019 mein',
 }
 
@@ -34,7 +32,14 @@ export function InterviewScreen() {
   const questions = getQuestions()
   const question = questions[currentQuestionIndex]
   const [input, setInput] = useState('')
+  const [selectedMulti, setSelectedMulti] = useState<string[]>([])
   const [showEmergency, setShowEmergency] = useState(false)
+
+  // Reset multi-select state on question change
+  useEffect(() => {
+    setSelectedMulti([])
+    setInput('')
+  }, [currentQuestionIndex])
 
   useEffect(() => {
     if (isEmergency && redFlags.length > 0) {
@@ -72,10 +77,34 @@ export function InterviewScreen() {
       answer
     )
     setInput('')
+    setSelectedMulti([])
 
     if (currentQuestionIndex >= questions.length - 1) {
       setStep('documents')
     }
+  }
+
+  const handleMultiToggle = (val: string) => {
+    if (val === 'none') {
+      setSelectedMulti(['none'])
+      return
+    }
+    const filtered = selectedMulti.filter((v) => v !== 'none')
+    if (filtered.includes(val)) {
+      setSelectedMulti(filtered.filter((v) => v !== val))
+    } else {
+      setSelectedMulti([...filtered, val])
+    }
+  }
+
+  const handleMultiSubmit = () => {
+    if (!question || selectedMulti.length === 0) return
+    // Format human-friendly string
+    const labels = selectedMulti.map((val) => {
+      const opt = question.options?.find((o) => o.value === val)
+      return opt ? (isHi ? opt.hi : opt.en) : val
+    })
+    handleSubmit(labels.join(', '))
   }
 
   const startVoice = () => {
@@ -110,6 +139,30 @@ export function InterviewScreen() {
     }
   }
 
+  // Fast forward all questions for judges in 1 click
+  const fastForwardInterview = () => {
+    const demoAnswers: Record<string, string> = {
+      cc_body_area: isHi ? '🫀 सीना / दिल का हिस्सा' : '🫀 Chest / Heart',
+      cc_main: '3 din se severe chest pain aur saans phul rahi hai',
+      hpi_sensation: isHi ? 'भारीपन या भारी दबाव' : 'Heavy pressure or tightness',
+      cc_duration: '1 to 3 days',
+      hpi_onset: '⚡ Suddenly (within minutes)',
+      hpi_pattern: 'Worse when walking or exerting',
+      hpi_severity: '8',
+      hpi_radiation: 'left_arm',
+      hpi_associated: '💦 Cold Sweating, 🫁 Shortness of breath, 🤢 Nausea',
+      past_conditions: 'High Blood Pressure (BP), Diabetes / Sugar',
+      med_current: 'Metformin 500mg BD, Amlodipine 5mg OD',
+      allergy: 'Penicillin (NKDA otherwise)',
+    }
+
+    questions.forEach((q) => {
+      const ans = demoAnswers[q.id] || (q.options ? q.options[0].value : 'None')
+      submitAnswer(q.id, isHi ? q.text.hi : q.text.en, ans)
+    })
+    setStep('documents')
+  }
+
   useEffect(() => {
     if (!question) setStep('documents')
   }, [question, setStep])
@@ -127,11 +180,20 @@ export function InterviewScreen() {
             enabled={voiceEnabled}
             onToggle={toggleVoice}
           />
-          {historyMode === 'ayush' && (
-            <span className="px-3 py-1 bg-ayush-surface text-ayush-primary rounded-full text-sm font-medium">
-              AYUSH Mode
-            </span>
-          )}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={fastForwardInterview}
+              className="text-xs px-3 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-800 rounded-lg font-bold border border-amber-300 transition-colors shadow-sm"
+              title="Auto-fill all questions with cardiac presentation for testing"
+            >
+              ⚡ Fast Demo (Fill All)
+            </button>
+            {historyMode === 'ayush' && (
+              <span className="px-3 py-1 bg-ayush-surface text-ayush-primary rounded-full text-sm font-medium">
+                AYUSH Mode
+              </span>
+            )}
+          </div>
         </div>
 
         <ProgressBar
@@ -141,56 +203,117 @@ export function InterviewScreen() {
         />
 
         <div className="kiosk-card mt-6 animate-slide-up">
-          <p className="text-sm text-medikiosk-primary font-semibold uppercase mb-2">
+          <p className="text-sm text-medikiosk-primary font-semibold uppercase mb-1">
             {isHi ? `प्रश्न ${currentQuestionIndex + 1}/${questions.length}` : `Question ${currentQuestionIndex + 1}/${questions.length}`}
           </p>
-          <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mb-8 leading-relaxed">
+          <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mb-2 leading-relaxed">
             {isHi ? question.text.hi : question.text.en}
           </h2>
+          {question.subtext && (
+            <p className="text-sm text-slate-500 mb-6 font-medium">
+              {isHi ? question.subtext.hi : question.subtext.en}
+            </p>
+          )}
 
+          {/* Single Choice Options */}
           {question.type === 'choice' && question.options && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
               {question.options.map((opt) => (
                 <button
                   key={opt.value}
                   onClick={() => handleSubmit(opt.value)}
-                  className="touch-option text-left !items-start"
+                  className="touch-option text-left !items-start hover:border-medikiosk-primary hover:bg-medikiosk-surface transition-all"
                 >
-                  <span className="font-semibold text-lg">{isHi ? opt.hi : opt.en}</span>
+                  <span className="font-semibold text-lg text-slate-800">{isHi ? opt.hi : opt.en}</span>
                 </button>
               ))}
             </div>
           )}
 
+          {/* Multi-Choice / Multi-Select Chips */}
+          {question.type === 'multichoice' && question.options && (
+            <div className="space-y-4 mb-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {question.options.map((opt) => {
+                  const isSelected = selectedMulti.includes(opt.value)
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => handleMultiToggle(opt.value)}
+                      className={`p-4 rounded-xl border-2 text-left font-semibold text-base transition-all flex items-center justify-between ${
+                        isSelected
+                          ? 'border-medikiosk-primary bg-medikiosk-surface text-medikiosk-primary shadow-sm'
+                          : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
+                      }`}
+                    >
+                      <span>{isHi ? opt.hi : opt.en}</span>
+                      <span
+                        className={`w-6 h-6 rounded-md flex items-center justify-center border text-sm font-bold ${
+                          isSelected
+                            ? 'bg-medikiosk-primary text-white border-medikiosk-primary'
+                            : 'border-slate-300 text-transparent'
+                        }`}
+                      >
+                        ✓
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+
+              <button
+                onClick={handleMultiSubmit}
+                disabled={selectedMulti.length === 0}
+                className="kiosk-btn-primary w-full py-4 text-lg font-bold flex items-center justify-center gap-2"
+              >
+                <span>{isHi ? 'चुनें और आगे बढ़ें' : 'Confirm & Continue'}</span>
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+          )}
+
+          {/* Yes/No Choice */}
           {question.type === 'yesno' && (
             <div className="grid grid-cols-2 gap-4 mb-6">
-              <button onClick={() => handleSubmit('yes')} className="kiosk-btn-primary">
+              <button onClick={() => handleSubmit('yes')} className="kiosk-btn-primary py-4 text-xl">
                 {isHi ? 'हाँ' : 'Yes'}
               </button>
-              <button onClick={() => handleSubmit('no')} className="kiosk-btn-secondary">
+              <button onClick={() => handleSubmit('no')} className="kiosk-btn-secondary py-4 text-xl">
                 {isHi ? 'नहीं' : 'No'}
               </button>
             </div>
           )}
 
+          {/* Scale 1-10 with Severity Visual Cues */}
           {question.type === 'scale' && (
-            <div className="grid grid-cols-5 gap-2 mb-6">
-              {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
-                <button
-                  key={n}
-                  onClick={() => handleSubmit(String(n))}
-                  className={`py-4 rounded-xl font-bold text-lg border-2 transition-all ${
-                    n >= 7
-                      ? 'border-medikiosk-emergency text-medikiosk-emergency hover:bg-medikiosk-emergency-light'
-                      : 'border-medikiosk-border hover:border-medikiosk-primary'
-                  }`}
-                >
-                  {n}
-                </button>
-              ))}
+            <div className="mb-6 space-y-3">
+              <div className="grid grid-cols-5 sm:grid-cols-10 gap-2">
+                {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+                  <button
+                    key={n}
+                    onClick={() => handleSubmit(String(n))}
+                    className={`py-4 rounded-xl font-bold text-xl border-2 transition-all shadow-sm ${
+                      n >= 7
+                        ? 'border-rose-400 text-rose-700 bg-rose-50 hover:bg-rose-100 hover:border-rose-600'
+                        : n >= 4
+                        ? 'border-amber-300 text-amber-800 bg-amber-50 hover:bg-amber-100 hover:border-amber-500'
+                        : 'border-emerald-300 text-emerald-800 bg-emerald-50 hover:bg-emerald-100 hover:border-emerald-500'
+                    }`}
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
+              <div className="flex justify-between text-xs font-semibold text-slate-500 px-1 pt-1">
+                <span className="text-emerald-700">1-3: {isHi ? 'हल्का (Mild)' : 'Mild'}</span>
+                <span className="text-amber-700">4-6: {isHi ? 'मध्यम (Moderate)' : 'Moderate'}</span>
+                <span className="text-rose-700 font-bold">7-10: {isHi ? 'तेज / असहनीय (Severe)' : 'Severe / Emergency'}</span>
+              </div>
             </div>
           )}
 
+          {/* Open Text / Voice Input */}
           {(question.type === 'text' || question.type === 'scale') && (
             <div className="space-y-4">
               <div className="flex gap-2">
@@ -204,23 +327,37 @@ export function InterviewScreen() {
                 />
                 {voiceEnabled && (
                   <button
+                    type="button"
                     onClick={startVoice}
-                    className={`p-4 rounded-xl ${isListening ? 'bg-medikiosk-emergency text-white animate-pulse' : 'bg-medikiosk-surface text-medikiosk-primary'}`}
+                    className={`p-4 rounded-xl transition-transform active:scale-95 ${
+                      isListening
+                        ? 'bg-medikiosk-emergency text-white animate-pulse'
+                        : 'bg-medikiosk-surface text-medikiosk-primary'
+                    }`}
+                    title="Speak using microphone"
                   >
                     <Mic className="w-6 h-6" />
                   </button>
                 )}
                 <button
+                  type="button"
                   onClick={() => handleSubmit()}
                   disabled={!input.trim()}
-                  className="p-4 rounded-xl bg-medikiosk-primary text-white disabled:opacity-50"
+                  className="p-4 rounded-xl bg-medikiosk-primary text-white disabled:opacity-50 hover:bg-medikiosk-primary-dark transition-colors"
                 >
                   <Send className="w-6 h-6" />
                 </button>
               </div>
-              <button onClick={fillDemo} className="text-sm text-medikiosk-secondary underline">
-                {isHi ? '🎤 डेमो: "3 din se chest pain…"' : '🎤 Demo: "3 din se chest pain…"'}
-              </button>
+              {DEMO_PHRASES[question.id] && (
+                <button
+                  type="button"
+                  onClick={fillDemo}
+                  className="text-sm text-medikiosk-secondary hover:underline font-medium flex items-center gap-1"
+                >
+                  <span>🎤 {isHi ? 'डेमो त्वरित उत्तर भरें:' : 'Quick Demo Response:'}</span>
+                  <span className="italic">"{DEMO_PHRASES[question.id]}"</span>
+                </button>
+              )}
             </div>
           )}
 
@@ -235,7 +372,7 @@ export function InterviewScreen() {
 
         <button
           onClick={() => setStep('documents')}
-          className="flex items-center gap-2 mx-auto mt-6 text-medikiosk-primary font-medium"
+          className="flex items-center gap-2 mx-auto mt-6 text-medikiosk-primary font-medium hover:underline"
         >
           {isHi ? 'दस्तावेज़ स्कैन पर जाएं' : 'Skip to Document Scan'}
           <ChevronRight className="w-4 h-4" />

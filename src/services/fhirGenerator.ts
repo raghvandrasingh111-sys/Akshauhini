@@ -5,6 +5,7 @@ import type {
   RedFlag,
   AyushProfile,
   PatientIdentity,
+  GeminiDoctorKeyPoints,
 } from '../types'
 
 export function generateClinicalSummary(
@@ -12,30 +13,42 @@ export function generateClinicalSummary(
   answers: InterviewAnswer[],
   documents: ExtractedDocument[],
   redFlags: RedFlag[],
-  ayushProfile?: AyushProfile
+  ayushProfile?: AyushProfile,
+  geminiAnalysis?: GeminiDoctorKeyPoints
 ): ClinicalSummary {
-  const chiefComplaint = answers.find((a) => a.questionId === 'cc_main')?.answer ?? 'Not recorded'
+  const chiefComplaint =
+    answers.find((a) => a.questionId === 'cc_main')?.answer ??
+    answers.find((a) => a.questionId === 'cc_body_area')?.answer ??
+    'Not recorded'
   const duration = answers.find((a) => a.questionId === 'cc_duration')?.answer ?? ''
   const onset = answers.find((a) => a.questionId === 'hpi_onset')?.answer ?? ''
   const severity = answers.find((a) => a.questionId === 'hpi_severity')?.answer ?? ''
   const radiation = answers.find((a) => a.questionId === 'hpi_radiation')?.answer ?? ''
+  const sensation = answers.find((a) => a.questionId === 'hpi_sensation')?.answer ?? ''
+  const pattern = answers.find((a) => a.questionId === 'hpi_pattern')?.answer ?? ''
+  const associated = answers.find((a) => a.questionId === 'hpi_associated')?.answer ?? ''
   const aggravating = answers.find((a) => a.questionId === 'hpi_aggravating')?.answer ?? ''
   const relieving = answers.find((a) => a.questionId === 'hpi_relieving')?.answer ?? ''
 
   const hpi = [
     duration && `Duration: ${duration}`,
     onset && `Onset: ${onset}`,
+    sensation && `Character: ${sensation}`,
+    pattern && `Pattern: ${pattern}`,
     severity && `Severity: ${severity}/10`,
     radiation && radiation !== 'none' && `Radiation: ${radiation}`,
+    associated && associated !== 'none' && `Associated: ${associated}`,
     aggravating && `Aggravating: ${aggravating}`,
     relieving && `Relieving: ${relieving}`,
   ]
     .filter(Boolean)
     .join('. ')
 
+  const pastConditions = answers.find((a) => a.questionId === 'past_conditions')?.answer
   const pastHistory = [
     answers.find((a) => a.questionId === 'past_diabetes')?.answer === 'yes' && 'Diabetes Mellitus',
     answers.find((a) => a.questionId === 'past_hypertension')?.answer === 'yes' && 'Hypertension',
+    pastConditions && pastConditions !== 'none' && `History of: ${pastConditions}`,
     answers.find((a) => a.questionId === 'past_surgery')?.answer,
   ]
     .filter(Boolean)
@@ -54,6 +67,7 @@ export function generateClinicalSummary(
 
   const ros = [
     answers.find((a) => a.questionId === 'ros_fever')?.answer === 'yes' && 'Fever present',
+    associated && associated !== 'none' && `Associated symptoms: ${associated}`,
     answers.find((a) => a.questionId === 'ros_weight')?.answer &&
       `Weight change: ${answers.find((a) => a.questionId === 'ros_weight')?.answer}`,
   ]
@@ -83,6 +97,7 @@ export function generateClinicalSummary(
     ayushProfile,
     redFlags,
     documents,
+    geminiAnalysis,
     fhirBundle: buildFHIRBundle(identity, summaryFields({
       chiefComplaint, hpi, pastHistory, medications, allergies, ros, priorInvestigations, redFlags,
     })),

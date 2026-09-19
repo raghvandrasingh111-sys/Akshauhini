@@ -65,6 +65,25 @@ export interface ClinicalEntity {
   referenceRange?: string
 }
 
+export interface GeminiDifferential {
+  condition: string
+  likelihood: 'High' | 'Moderate' | 'Low'
+  reason: string
+}
+
+export interface GeminiDoctorKeyPoints {
+  clinicalImpression: string
+  urgencyLevel: 'Emergency' | 'Urgent' | 'Routine'
+  urgencyReason: string
+  keyFindings: string[]
+  pertinentPositives: string[]
+  pertinentNegatives: string[]
+  differentialDiagnoses: GeminiDifferential[]
+  recommendedWorkup: string[]
+  suggestedDoctorQuestions: string[]
+  generatedAt?: string
+}
+
 export interface ClinicalSummary {
   id: string
   patientId: string
@@ -81,6 +100,8 @@ export interface ClinicalSummary {
   documents: ExtractedDocument[]
   fhirBundle: FHIRBundle
   status: 'draft' | 'verified' | 'amended'
+  geminiAnalysis?: GeminiDoctorKeyPoints
+  geminiLoading?: boolean
 }
 
 export interface AyushProfile {
@@ -113,8 +134,9 @@ export interface FHIREntry {
 export interface InterviewQuestion {
   id: string
   text: { en: string; hi: string }
-  type: 'text' | 'choice' | 'scale' | 'yesno'
-  options?: { en: string; hi: string; value: string }[]
+  subtext?: { en: string; hi: string }
+  type: 'text' | 'choice' | 'multichoice' | 'scale' | 'yesno'
+  options?: { en: string; hi: string; value: string; icon?: string }[]
   branch?: Record<string, string>
   redFlagValues?: string[]
   category: 'chief_complaint' | 'hpi' | 'past_history' | 'ros' | 'medications' | 'allergies' | 'ayush'
@@ -134,4 +156,5 @@ export interface AppState {
   isEmergency: boolean
   voiceEnabled: boolean
   isListening: boolean
+  geminiLoading?: boolean
 }

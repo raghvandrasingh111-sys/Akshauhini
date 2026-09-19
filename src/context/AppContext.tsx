@@ -14,11 +14,16 @@ import type {
   Language,
   HistoryMode,
   KioskStep,
+  GeminiDoctorKeyPoints,
 } from '../types'
 import { allopathicQuestions } from '../data/questions'
 import { ayushQuestions } from '../data/ayushQuestions'
 import { detectRedFlags, isEmergency } from '../services/triageEngine'
 import { generateClinicalSummary, buildAyushProfile } from '../services/fhirGenerator'
+import {
+  analyzePatientIntakeWithGemini,
+  generateSimulatedGeminiAnalysis,
+} from '../services/geminiService'
 
 const initialState: AppState = {
   step: 'welcome',
@@ -34,6 +39,7 @@ const initialState: AppState = {
   isEmergency: false,
   voiceEnabled: true,
   isListening: false,
+  geminiLoading: false,
 }
 
 type Action =
@@ -47,7 +53,9 @@ type Action =
   | { type: 'ADD_DOCUMENT'; document: ExtractedDocument }
   | { type: 'SET_LISTENING'; listening: boolean }
   | { type: 'TOGGLE_VOICE' }
-  | { type: 'FINALIZE_SUMMARY' }
+  | { type: 'FINALIZE_SUMMARY'; initialAnalysis?: GeminiDoctorKeyPoints }
+  | { type: 'SET_GEMINI_LOADING'; loading: boolean }
+  | { type: 'SET_GEMINI_ANALYSIS'; analysis: GeminiDoctorKeyPoints }
   | { type: 'VERIFY_SUMMARY' }
   | { type: 'RESET' }
 
@@ -90,10 +98,25 @@ function reducer(state: AppState, action: Action): AppState {
         state.interviewAnswers,
         state.documents,
         state.redFlags,
-        ayush
+        ayush,
+        action.initialAnalysis
       )
-      return { ...state, summary, step: 'summary' }
+      return { ...state, summary, step: 'summary', geminiLoading: !action.initialAnalysis }
     }
+    case 'SET_GEMINI_LOADING':
+      return {
+        ...state,
+        geminiLoading: action.loading,
+        summary: state.summary ? { ...state.summary, geminiLoading: action.loading } : null,
+      }
+    case 'SET_GEMINI_ANALYSIS':
+      return {
+        ...state,
+        geminiLoading: false,
+        summary: state.summary
+          ? { ...state.summary, geminiAnalysis: action.analysis, geminiLoading: false }
+          : null,
+      }
     case 'VERIFY_SUMMARY':
       return state.summary
         ? { ...state, summary: { ...state.summary, status: 'verified' }, step: 'complete' }
@@ -114,7 +137,8 @@ interface AppContextValue extends AppState {
   submitAnswer: (questionId: string, question: string, answer: string) => void
   nextQuestion: () => void
   addDocument: (doc: ExtractedDocument) => void
-  finalizeSummary: () => void
+  finalizeSummary: () => Promise<void>
+  refreshGeminiAnalysis: () => Promise<void>
   verifySummary: () => void
   reset: () => void
   toggleVoice: () => void
@@ -171,9 +195,48 @@ export function AppProvider({ children }: { children: ReactNode }) {
     []
   )
 
-  const finalizeSummary = useCallback(() => {
+  const runGemini = useCallback(
+    async (
+      identity: PatientIdentity,
+      answers: InterviewAnswer[],
+      docs: ExtractedDocument[],
+      flags: typeof state.redFlags
+    ) => {
+      dispatch({ type: 'SET_GEMINI_LOADING', loading: true })
+      try {
+        const analysis = await analyzePatientIntakeWithGemini({
+          identity,
+          answers,
+          documents: docs,
+          redFlags: flags,
+        })
+        dispatch({ type: 'SET_GEMINI_ANALYSIS', analysis })
+      } catch (err) {
+        console.error('[AppContext] Failed to run Gemini analysis:', err)
+        const fallback = generateSimulatedGeminiAnalysis({
+          identity,
+          answers,
+          documents: docs,
+          redFlags: flags,
+        })
+        dispatch({ type: 'SET_GEMINI_ANALYSIS', analysis: fallback })
+      }
+    },
+    []
+  )
+
+  const finalizeSummary = useCallback(async () => {
     dispatch({ type: 'FINALIZE_SUMMARY' })
-  }, [])
+    if (state.identity) {
+      await runGemini(state.identity, state.interviewAnswers, state.documents, state.redFlags)
+    }
+  }, [state.identity, state.interviewAnswers, state.documents, state.redFlags, runGemini])
+
+  const refreshGeminiAnalysis = useCallback(async () => {
+    if (state.identity) {
+      await runGemini(state.identity, state.interviewAnswers, state.documents, state.redFlags)
+    }
+  }, [state.identity, state.interviewAnswers, state.documents, state.redFlags, runGemini])
 
   const verifySummary = useCallback(() => {
     dispatch({ type: 'VERIFY_SUMMARY' })
@@ -188,11 +251,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const loadDemoSummary = useCallback(() => {
     const demoIdentity: PatientIdentity = {
       abhaId: '91-1234-5678-9012',
-      name: 'Demo Patient (Judge)',
+      name: 'Ramesh Kumar Sharma (Demo)',
       age: 52,
       gender: 'male',
+      isAbhaVerified: true,
+      address: 'Indore, Madhya Pradesh',
     }
     const demoAnswers: InterviewAnswer[] = [
+      {
+        questionId: 'cc_body_area',
+        question: 'Where are you feeling the trouble?',
+        answer: '🫀 Chest / Heart (सीना / दिल का हिस्सा)',
+        timestamp: new Date().toISOString(),
+      },
       {
         questionId: 'cc_main',
         question: 'Main complaint',
@@ -200,15 +271,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
         timestamp: new Date().toISOString(),
       },
       {
+        questionId: 'hpi_sensation',
+        question: 'Feeling or pain',
+        answer: 'Heavy pressure or tightness (भारीपन या भारी दबाव)',
+        timestamp: new Date().toISOString(),
+      },
+      {
         questionId: 'cc_duration',
         question: 'Duration',
-        answer: '1-3d',
+        answer: '1 to 3 days',
         timestamp: new Date().toISOString(),
       },
       {
         questionId: 'hpi_onset',
         question: 'Onset',
-        answer: 'sudden',
+        answer: '⚡ Suddenly (within minutes)',
+        timestamp: new Date().toISOString(),
+      },
+      {
+        questionId: 'hpi_pattern',
+        question: 'Pattern',
+        answer: 'Worse when walking or exerting',
         timestamp: new Date().toISOString(),
       },
       {
@@ -223,9 +306,39 @@ export function AppProvider({ children }: { children: ReactNode }) {
         answer: 'left_arm',
         timestamp: new Date().toISOString(),
       },
+      {
+        questionId: 'hpi_associated',
+        question: 'Associated symptoms',
+        answer: '💦 Cold Sweating, 🫁 Shortness of breath, 🤢 Nausea',
+        timestamp: new Date().toISOString(),
+      },
+      {
+        questionId: 'past_conditions',
+        question: 'Existing conditions',
+        answer: 'High Blood Pressure (BP), Diabetes / Sugar',
+        timestamp: new Date().toISOString(),
+      },
+      {
+        questionId: 'med_current',
+        question: 'Current medications',
+        answer: 'Metformin 500mg BD, Amlodipine 5mg OD',
+        timestamp: new Date().toISOString(),
+      },
     ]
     const flags = detectRedFlags(demoAnswers)
-    const summary = generateClinicalSummary(demoIdentity, demoAnswers, [], flags)
+    const geminiAnalysis = generateSimulatedGeminiAnalysis({
+      identity: demoIdentity,
+      answers: demoAnswers,
+      redFlags: flags,
+    })
+    const summary = generateClinicalSummary(
+      demoIdentity,
+      demoAnswers,
+      [],
+      flags,
+      undefined,
+      geminiAnalysis
+    )
     saveSummary(summary)
   }, [saveSummary])
 
@@ -240,6 +353,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     nextQuestion,
     addDocument,
     finalizeSummary,
+    refreshGeminiAnalysis,
     verifySummary,
     reset,
     toggleVoice,
