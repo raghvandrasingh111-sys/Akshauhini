@@ -1,8 +1,9 @@
 import { supabase } from '../../lib/supabase'
+import { isUuid, toValidUuidOrNull } from '../../lib/uuid'
 import type { DashboardMetrics, OpdVisit, QueueVisit } from '../../types/database'
 
 export async function getDashboardMetrics(hospitalId: string): Promise<DashboardMetrics> {
-  if (!supabase || !hospitalId || hospitalId.trim() === '') {
+  if (!supabase || !hospitalId || !isUuid(hospitalId)) {
     return { waiting: 0, inConsultation: 0, completed: 0, priorityAlerts: 0 }
   }
 
@@ -25,7 +26,7 @@ export async function getDashboardMetrics(hospitalId: string): Promise<Dashboard
 }
 
 export async function getQueueForToday(hospitalId: string): Promise<QueueVisit[]> {
-  if (!supabase || !hospitalId || hospitalId.trim() === '') {
+  if (!supabase || !hospitalId || !isUuid(hospitalId)) {
     return []
   }
 
@@ -44,9 +45,10 @@ export async function getQueueForToday(hospitalId: string): Promise<QueueVisit[]
 }
 
 export async function updateVisitStatus(visitId: string, status: OpdVisit['status']) {
-  if (!supabase) {
-    return { data: null, error: new Error('Supabase is not configured') }
+  const visitUuid = toValidUuidOrNull(visitId)
+  if (!supabase || !visitUuid) {
+    return { data: null, error: new Error('Valid visit UUID required') }
   }
 
-  return supabase.from('opd_visits').update({ status, updated_at: new Date().toISOString() }).eq('id', visitId)
+  return supabase.from('opd_visits').update({ status, updated_at: new Date().toISOString() }).eq('id', visitUuid)
 }

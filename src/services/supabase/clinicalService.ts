@@ -1,4 +1,5 @@
 import { supabase } from '../../lib/supabase'
+import { isUuid, toValidUuidOrNull } from '../../lib/uuid'
 
 function requireSupabase() {
   if (!supabase) throw new Error('Supabase is not configured')
@@ -6,6 +7,7 @@ function requireSupabase() {
 }
 
 export async function getTodayIntake(visitId: string) {
+  if (!isUuid(visitId)) return null
   const client = requireSupabase()
   const { data, error } = await client.from('patient_intakes').select('*, intake_answers(*), ayush_assessments(*)').eq('opd_visit_id', visitId).maybeSingle()
   if (error) throw error
@@ -13,6 +15,7 @@ export async function getTodayIntake(visitId: string) {
 }
 
 export async function getClinicalSummary(visitId: string) {
+  if (!isUuid(visitId)) return null
   const client = requireSupabase()
   const { data, error } = await client.from('clinical_summaries').select('*').eq('opd_visit_id', visitId).maybeSingle()
   if (error) throw error
@@ -20,6 +23,7 @@ export async function getClinicalSummary(visitId: string) {
 }
 
 export async function getPatientTimeline(patientId: string) {
+  if (!isUuid(patientId)) return []
   const client = requireSupabase()
   const { data, error } = await client.from('patient_timeline_events').select('*').eq('patient_id', patientId).order('event_at', { ascending: false })
   if (error) throw error
@@ -37,16 +41,23 @@ export async function createPatientTimelineEvent(params: {
   sourceId?: string
   eventAt?: string
 }) {
+  const patientUuid = toValidUuidOrNull(params.patientId)
+  const hospitalUuid = toValidUuidOrNull(params.hospitalId)
+  if (!patientUuid || !hospitalUuid) {
+    console.warn('[ClinicalService] Timeline event skipped due to missing valid UUIDs')
+    return
+  }
+
   const client = requireSupabase()
   const { error } = await client.from('patient_timeline_events').insert({
-    patient_id: params.patientId,
-    hospital_id: params.hospitalId,
-    opd_visit_id: params.opdVisitId ?? null,
+    patient_id: patientUuid,
+    hospital_id: hospitalUuid,
+    opd_visit_id: toValidUuidOrNull(params.opdVisitId),
     event_type: params.eventType,
     title: params.title,
     description: params.description ?? null,
     source_table: params.sourceTable ?? null,
-    source_id: params.sourceId ? params.sourceId : null,
+    source_id: toValidUuidOrNull(params.sourceId),
     event_at: params.eventAt ?? new Date().toISOString(),
   })
   if (error) {
@@ -65,31 +76,40 @@ export async function saveConsultation(params: {
   treatmentPlan?: string
   status: 'draft' | 'in_progress' | 'completed' | 'follow_up'
 }) {
+  const patientUuid = toValidUuidOrNull(params.patientId)
+  const visitUuid = toValidUuidOrNull(params.visitId)
+  const doctorUuid = toValidUuidOrNull(params.doctorId)
+  const consultationUuid = toValidUuidOrNull(params.consultationId)
+
+  if (!patientUuid || !visitUuid || !doctorUuid) {
+    throw new Error('Valid patient, visit, and doctor UUIDs are required.')
+  }
+
   const client = requireSupabase()
   const payload = {
-    patient_id: params.patientId,
-    opd_visit_id: params.visitId,
-    doctor_id: params.doctorId,
+    patient_id: patientUuid,
+    opd_visit_id: visitUuid,
+    doctor_id: doctorUuid,
     consultation_notes: params.consultationNotes ?? null,
     diagnosis: params.diagnosis ?? null,
     treatment_plan: params.treatmentPlan ?? null,
     status: params.status,
     updated_at: new Date().toISOString(),
   }
-  const query = params.consultationId
-    ? client.from('consultations').update(payload).eq('id', params.consultationId)
+  const query = consultationUuid
+    ? client.from('consultations').update(payload).eq('id', consultationUuid)
     : client.from('consultations').insert(payload)
   const { data, error } = await query.select('*').single()
   if (error) throw error
 
   try {
-    const hospitalId = await client.from('opd_visits').select('hospital_id').eq('id', params.visitId).single()
+    const hospitalId = await client.from('opd_visits').select('hospital_id').eq('id', visitUuid).single()
     const resolvedHospitalId = hospitalId.data?.hospital_id ?? null
-    if (resolvedHospitalId) {
+    if (resolvedHospitalId && isUuid(resolvedHospitalId)) {
       await createPatientTimelineEvent({
-        patientId: params.patientId,
+        patientId: patientUuid,
         hospitalId: resolvedHospitalId,
-        opdVisitId: params.visitId,
+        opdVisitId: visitUuid,
         eventType: params.status === 'completed' ? 'consultation_completed' : 'consultation_draft',
         title: params.status === 'completed' ? 'Doctor Consultation' : 'Consultation Draft Saved',
         description: params.status === 'completed'
@@ -104,7 +124,7 @@ export async function saveConsultation(params: {
   }
 
   await writeAuditLog({
-    patientId: params.patientId,
+    patientId: patientUuid,
     action: params.status === 'completed' ? 'CONSULTATION_COMPLETED' : 'CONSULTATION_DRAFT_SAVED',
     entityType: 'consultation',
     entityId: data.id,
@@ -121,19 +141,25 @@ export async function writeAuditLog(params: {
   entityId?: string
   metadata?: Record<string, unknown>
 }): Promise<void> {
-  const client = requireSupabase()
-  const user = await client.auth.getUser()
-  if (!user.data.user) throw new Error('Authenticated doctor required')
-  const { error } = await client.from('audit_logs').insert({
-    actor_id: user.data.user.id,
-    patient_id: params.patientId ?? null,
-    action: params.action,
-    entity_type: params.entityType,
-    entity_id: params.entityId ?? null,
-    metadata: params.metadata ?? {},
-  })
-  if (error) {
-    // Audit failure must not block patient identity and consent workflows.
-    console.error('[ClinicalService] Audit log write failed:', error.message)
+  if (!supabase) return
+  try {
+    const client = supabase
+    const user = await client.auth.getUser()
+    const actorUuid = toValidUuidOrNull(user.data.user?.id)
+    if (!actorUuid) return
+
+    const { error } = await client.from('audit_logs').insert({
+      actor_id: actorUuid,
+      patient_id: toValidUuidOrNull(params.patientId),
+      action: params.action,
+      entity_type: params.entityType,
+      entity_id: toValidUuidOrNull(params.entityId),
+      metadata: params.metadata ?? {},
+    })
+    if (error) {
+      console.warn('[ClinicalService] Audit log write skipped:', error.message)
+    }
+  } catch (err) {
+    console.warn('[ClinicalService] Audit log exception caught:', err)
   }
 }

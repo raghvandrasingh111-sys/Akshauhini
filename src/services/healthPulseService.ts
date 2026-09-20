@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase'
+import { isUuid } from '../lib/uuid'
 
 export type HealthPulsePeriod = 'today' | '7d' | '30d'
 export type TrendDirection = 'rising' | 'stable' | 'falling' | 'insufficient_data'
@@ -65,7 +66,7 @@ function getTrend(changePercent: number | null): TrendDirection {
 }
 
 export async function getHealthPulseSummary(hospitalId: string, period: HealthPulsePeriod): Promise<HealthPulseSummary> {
-  if (!supabase || !hospitalId || hospitalId.trim() === '') {
+  if (!supabase || !hospitalId || !isUuid(hospitalId)) {
     return {
       period,
       totalCases: 12,

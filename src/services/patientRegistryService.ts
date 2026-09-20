@@ -1,5 +1,6 @@
 import type { ClinicalSummary, DoctorAccessRequest, PatientIdentity } from '../types'
 import { supabase } from '../lib/supabase'
+import { toValidUuidOrNull } from '../lib/uuid'
 
 export interface PatientRegistryRecord {
   databaseId?: string
@@ -105,7 +106,7 @@ export async function registerOrLoginPatient(input: {
       p_address: input.address ?? null,
       p_abha_number: input.abhaNumber ?? null,
       p_abha_address: input.abhaAddress ?? null,
-      p_hospital_id: import.meta.env.VITE_DEFAULT_HOSPITAL_ID || null,
+      p_hospital_id: toValidUuidOrNull(import.meta.env.VITE_DEFAULT_HOSPITAL_ID),
     })
     if (!error && data) return fromSupabasePatient(data as Record<string, unknown>)
     if (error) console.warn('[PatientRegistry] Supabase registration failed:', error.message)

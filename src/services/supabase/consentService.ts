@@ -1,4 +1,5 @@
 import { supabase } from '../../lib/supabase'
+import { isUuid, toValidUuidOrNull } from '../../lib/uuid'
 import { writeAuditLog } from './clinicalService'
 
 export async function requestPatientConsent(params: {
@@ -12,13 +13,34 @@ export async function requestPatientConsent(params: {
     return { data: null, error: new Error('Supabase is not configured') }
   }
 
+  const patientUuid = toValidUuidOrNull(params.patientId)
+  if (!patientUuid) {
+    return { data: null, error: new Error('A valid patient UUID is required') }
+  }
+
   const user = await supabase.auth.getUser()
-  if (!user.data.user) return { data: null, error: new Error('Authenticated doctor required') }
+  if (!user.data.user || !isUuid(user.data.user.id)) {
+    return { data: null, error: new Error('Authenticated doctor required') }
+  }
+
+  // Ensure valid hospitalId
+  let hospitalUuid = toValidUuidOrNull(params.hospitalId)
+  if (!hospitalUuid) {
+    // Attempt lookup from doctor's profile or default
+    const docProfile = await supabase.from('doctors').select('hospital_id').eq('id', user.data.user.id).maybeSingle()
+    if (docProfile.data?.hospital_id && isUuid(docProfile.data.hospital_id)) {
+      hospitalUuid = docProfile.data.hospital_id
+    }
+  }
+
+  if (!hospitalUuid) {
+    return { data: null, error: new Error('Valid hospital ID required for consent request') }
+  }
 
   const result = await supabase.from('consent_requests').insert({
-    patient_id: params.patientId,
+    patient_id: patientUuid,
     doctor_id: user.data.user.id,
-    hospital_id: params.hospitalId,
+    hospital_id: hospitalUuid,
     purpose: params.purpose,
     requested_data_types: params.requestedDataTypes,
     status: 'pending',
@@ -27,7 +49,7 @@ export async function requestPatientConsent(params: {
     consent_reference: `consent-${Date.now()}`,
   }).select('*').single()
   if (!result.error && result.data) {
-    await writeAuditLog({ patientId: params.patientId, action: 'CONSENT_REQUESTED', entityType: 'consent_request', entityId: result.data.id })
+    await writeAuditLog({ patientId: patientUuid, action: 'CONSENT_REQUESTED', entityType: 'consent_request', entityId: result.data.id })
   }
   return result
 }
@@ -40,6 +62,11 @@ export async function grantConsent(consentId: string) {
     return { data: null, error: new Error('Supabase is not configured') }
   }
 
+  const consentUuid = toValidUuidOrNull(consentId)
+  if (!consentUuid) {
+    return { data: null, error: new Error('Invalid consent ID') }
+  }
+
   const result = await supabase
     .from('consent_requests')
     .update({
@@ -47,11 +74,11 @@ export async function grantConsent(consentId: string) {
       responded_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
-    .eq('id', consentId)
+    .eq('id', consentUuid)
     .select('*')
     .single()
   if (!result.error && result.data && import.meta.env.VITE_ABDM_MODE === 'development') {
-    await writeAuditLog({ patientId: result.data.patient_id, action: 'CONSENT_GRANTED', entityType: 'consent_request', entityId: consentId })
+    await writeAuditLog({ patientId: result.data.patient_id, action: 'CONSENT_GRANTED', entityType: 'consent_request', entityId: consentUuid })
   }
   return result
 }
@@ -61,11 +88,18 @@ export async function getConsentStatus(patientId: string, doctorId: string) {
     return { data: null, error: new Error('Supabase is not configured') }
   }
 
+  const patientUuid = toValidUuidOrNull(patientId)
+  const doctorUuid = toValidUuidOrNull(doctorId)
+
+  if (!patientUuid || !doctorUuid) {
+    return { data: null, error: null }
+  }
+
   return supabase
     .from('consent_requests')
     .select('*')
-    .eq('patient_id', patientId)
-    .eq('doctor_id', doctorId)
+    .eq('patient_id', patientUuid)
+    .eq('doctor_id', doctorUuid)
     .order('requested_at', { ascending: false })
     .limit(1)
     .maybeSingle()

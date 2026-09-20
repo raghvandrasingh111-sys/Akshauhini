@@ -5,8 +5,7 @@ import type {
   RedFlag,
 } from '../types'
 import { supabase } from '../lib/supabase'
-
-// ─── Supabase client (singleton) ─────────────────────────────────────────────
+import { isUuid, toValidUuidOrNull } from '../lib/uuid'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -21,7 +20,7 @@ export interface SaveIntakeResult {
 // ─── Save patient intake to Supabase ─────────────────────────────────────────
 
 /**
- * Persists a completed patient intake to the patient_intakes Supabase table.
+ * Persists a completed patient intake to the kiosk_intakes Supabase table.
  * Falls back gracefully (returns 'offline') if Supabase is not configured or
  * unavailable — localStorage is always saved first by the caller.
  */
@@ -39,28 +38,32 @@ export async function saveIntakeToSupabase(
   }
 
   try {
-    const patientKey = identity.databaseId ?? identity.patientId ?? identity.abhaId ?? identity.phone
-    let patientUuid: string | null = null
+    let patientUuid: string | null = toValidUuidOrNull(identity.databaseId)
 
-    if (identity.databaseId) {
-      patientUuid = identity.databaseId
-    } else if (patientKey) {
-      const { data: patientRow, error: patientError } = await supabase
-        .from('patients')
-        .select('id')
-        .or(`patient_id.eq.${patientKey},phone.eq.${patientKey},abha_number.eq.${patientKey}`)
-        .maybeSingle()
+    if (!patientUuid && isUuid(identity.patientId)) {
+      patientUuid = identity.patientId
+    }
 
-      if (patientError) {
-        throw patientError
+    // If not a direct UUID, look up patient UUID from database
+    if (!patientUuid) {
+      const patientKey = (identity.patientId || identity.phone || identity.abhaId || identity.abhaNumber || '').trim()
+      if (patientKey) {
+        const { data: patientRow, error: patientError } = await supabase
+          .from('patients')
+          .select('id')
+          .or(`patient_id.eq.${patientKey},phone.eq.${patientKey},abha_number.eq.${patientKey}`)
+          .maybeSingle()
+
+        if (!patientError && patientRow && isUuid(patientRow.id)) {
+          patientUuid = patientRow.id
+        }
       }
-      patientUuid = (patientRow as { id?: string } | null)?.id ?? null
     }
 
     if (!patientUuid) {
-      const msg = 'Patient registration not found for intake sync.'
+      const msg = 'Patient registration UUID not found for intake sync.'
       console.warn('[Supabase] Intake save skipped:', msg)
-      return { status: 'error', error: msg }
+      return { status: 'offline', error: msg }
     }
 
     const row = {

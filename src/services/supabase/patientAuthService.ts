@@ -1,5 +1,6 @@
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '../../lib/supabase'
+import { toValidUuidOrNull } from '../../lib/uuid'
 
 export function normalizePatientPhone(phone: string): string {
   const digits = phone.replace(/\D/g, '').slice(-10)
@@ -50,7 +51,7 @@ export async function registerEmailPatient(input: {
     p_gender: input.gender,
     p_phone: input.phone,
     p_email: input.email.trim().toLowerCase(),
-    p_hospital_id: import.meta.env.VITE_DEFAULT_HOSPITAL_ID || null,
+    p_hospital_id: toValidUuidOrNull(import.meta.env.VITE_DEFAULT_HOSPITAL_ID),
   })
   if (error) throw error
   return data
@@ -72,7 +73,7 @@ export async function registerGooglePatient(input: {
     p_gender: input.gender,
     p_phone: input.phone,
     p_email: input.email,
-    p_hospital_id: import.meta.env.VITE_DEFAULT_HOSPITAL_ID || null,
+    p_hospital_id: toValidUuidOrNull(import.meta.env.VITE_DEFAULT_HOSPITAL_ID),
   })
   if (error) throw error
   return data
@@ -92,7 +93,7 @@ export async function registerManualPatient(input: {
     p_age: input.age,
     p_gender: input.gender,
     p_phone: input.phone,
-    p_hospital_id: import.meta.env.VITE_DEFAULT_HOSPITAL_ID || null,
+    p_hospital_id: toValidUuidOrNull(import.meta.env.VITE_DEFAULT_HOSPITAL_ID),
   })
   if (error) throw error
   return data
