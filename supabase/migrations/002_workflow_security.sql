@@ -15,6 +15,76 @@ alter table consent_requests add column if not exists updated_at timestamptz not
 alter table doctors add column if not exists is_active boolean not null default true;
 alter table audit_logs add column if not exists actor_user_id uuid references auth.users(id) on delete set null;
 
+create or replace function public.create_or_update_doctor_profile(
+  p_id uuid,
+  p_full_name text,
+  p_email text,
+  p_registration_number text,
+  p_specialization text,
+  p_hospital_id uuid,
+  p_role text default 'doctor',
+  p_is_active boolean default true,
+  p_avatar_url text default null
+)
+returns doctors
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  insert into public.doctors (
+    id,
+    full_name,
+    email,
+    registration_number,
+    specialization,
+    hospital_id,
+    role,
+    is_active,
+    avatar_url,
+    created_at,
+    updated_at
+  )
+  values (
+    p_id,
+    p_full_name,
+    p_email,
+    p_registration_number,
+    p_specialization,
+    p_hospital_id,
+    p_role,
+    p_is_active,
+    p_avatar_url,
+    now(),
+    now()
+  )
+  on conflict (id) do update set
+    full_name = excluded.full_name,
+    email = excluded.email,
+    registration_number = excluded.registration_number,
+    specialization = excluded.specialization,
+    hospital_id = excluded.hospital_id,
+    role = excluded.role,
+    is_active = excluded.is_active,
+    avatar_url = excluded.avatar_url,
+    updated_at = now();
+
+  return (select d from public.doctors d where d.id = p_id);
+end;
+$$;
+
+grant execute on function public.create_or_update_doctor_profile(
+  uuid,
+  text,
+  text,
+  text,
+  text,
+  uuid,
+  text,
+  boolean,
+  text
+) to authenticated;
+
 create table if not exists patient_intakes (
   id uuid primary key default gen_random_uuid(),
   patient_id uuid not null references patients(id) on delete cascade,

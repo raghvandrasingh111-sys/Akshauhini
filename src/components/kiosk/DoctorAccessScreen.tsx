@@ -74,7 +74,7 @@ export function DoctorAccessScreen() {
     try {
       const result = await requestPatientConsent({
         patientId: patient.id,
-        hospitalId: doctor.hospital_id || 'default-hospital',
+        hospitalId: doctor.hospital_id || import.meta.env.VITE_DEFAULT_HOSPITAL_ID || '00000000-0000-0000-0000-000000000001',
         purpose,
         requestedDataTypes: ['clinical_summary', 'documents', 'timeline', 'ai_clinical_brief'],
       })

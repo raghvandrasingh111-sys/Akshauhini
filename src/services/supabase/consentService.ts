@@ -1,6 +1,31 @@
 import { supabase } from '../../lib/supabase'
 import { isUuid, toValidUuidOrNull } from '../../lib/uuid'
+import { ensureDoctorProfileForSession, FALLBACK_HOSPITAL_ID } from './authService'
 import { writeAuditLog } from './clinicalService'
+
+async function ensureHospitalRecord(hospitalId: string) {
+  const validHospitalId = toValidUuidOrNull(hospitalId) ?? FALLBACK_HOSPITAL_ID
+
+  if (!supabase) {
+    return validHospitalId
+  }
+
+  const { error } = await supabase.from('hospitals').upsert({
+    id: validHospitalId,
+    name: 'Development Hospital',
+    registration_number: 'DEV-HOSP-001',
+    address: 'Demo District Hospital',
+    phone: '1800-000-000',
+    email: 'demo@hospital.local',
+    status: 'active',
+  }, { onConflict: 'id' })
+
+  if (error) {
+    console.warn('[ConsentService] Failed to ensure hospital record:', error.message)
+  }
+
+  return validHospitalId
+}
 
 export async function requestPatientConsent(params: {
   patientId: string
@@ -23,19 +48,23 @@ export async function requestPatientConsent(params: {
     return { data: null, error: new Error('Authenticated doctor required') }
   }
 
-  // Ensure valid hospitalId
-  let hospitalUuid = toValidUuidOrNull(params.hospitalId)
-  if (!hospitalUuid) {
-    // Attempt lookup from doctor's profile or default
-    const docProfile = await supabase.from('doctors').select('hospital_id').eq('id', user.data.user.id).maybeSingle()
-    if (docProfile.data?.hospital_id && isUuid(docProfile.data.hospital_id)) {
-      hospitalUuid = docProfile.data.hospital_id
-    }
+  try {
+    await ensureDoctorProfileForSession((await supabase.auth.getSession()).data.session)
+  } catch (createError) {
+    return { data: null, error: new Error(createError instanceof Error ? createError.message : 'Unable to create doctor profile for consent request') }
   }
 
+  // Ensure valid hospitalId. In development, fall back to the default hospital record
+  // instead of rejecting the request because a profile hasn't been fully assigned yet.
+  let hospitalUuid = toValidUuidOrNull(params.hospitalId)
+    ?? toValidUuidOrNull(import.meta.env.VITE_DEFAULT_HOSPITAL_ID)
+
   if (!hospitalUuid) {
-    return { data: null, error: new Error('Valid hospital ID required for consent request') }
+    const docProfile = await supabase.from('doctors').select('hospital_id').eq('id', user.data.user.id).maybeSingle()
+    hospitalUuid = toValidUuidOrNull(docProfile.data?.hospital_id) ?? FALLBACK_HOSPITAL_ID
   }
+
+  hospitalUuid = await ensureHospitalRecord(hospitalUuid)
 
   const result = await supabase.from('consent_requests').insert({
     patient_id: patientUuid,

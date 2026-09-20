@@ -1,11 +1,51 @@
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '../../lib/supabase'
+import { toValidUuidOrNull } from '../../lib/uuid'
 import type { DoctorProfile } from '../../types/database'
+
+export const FALLBACK_HOSPITAL_ID = '00000000-0000-0000-0000-000000000001'
 
 export class DoctorAuthError extends Error {
   constructor(message: string, public readonly code: 'DOCTOR_PROFILE_MISSING' | 'INACTIVE_DOCTOR' | 'DATABASE_ERROR') {
     super(message)
   }
+}
+
+export async function ensureDoctorProfileForSession(session: Session | null): Promise<DoctorProfile | null> {
+  if (!supabase || !session) return null
+
+  const existing = await supabase
+    .from('doctors')
+    .select('*')
+    .eq('id', session.user.id)
+    .maybeSingle()
+
+  if (existing.data) {
+    return existing.data as DoctorProfile
+  }
+
+  const fallbackHospitalId = toValidUuidOrNull(import.meta.env.VITE_DEFAULT_HOSPITAL_ID) ?? FALLBACK_HOSPITAL_ID
+  const fullName = typeof session.user.user_metadata?.full_name === 'string'
+    ? session.user.user_metadata.full_name
+    : session.user.email ?? 'Development Doctor'
+
+  const upsertResult = await supabase.rpc('create_or_update_doctor_profile', {
+    p_id: session.user.id,
+    p_full_name: fullName,
+    p_email: session.user.email ?? '',
+    p_registration_number: `DEV-${session.user.id.slice(0, 8)}`,
+    p_specialization: 'Development Doctor',
+    p_hospital_id: fallbackHospitalId,
+    p_role: 'doctor',
+    p_is_active: true,
+    p_avatar_url: null,
+  })
+
+  if (upsertResult.error) {
+    throw upsertResult.error
+  }
+
+  return upsertResult.data as DoctorProfile
 }
 
 export function createDevelopmentDoctorProfile(session: Session): DoctorProfile {
@@ -19,7 +59,7 @@ export function createDevelopmentDoctorProfile(session: Session): DoctorProfile 
     email: session.user.email ?? '',
     registration_number: '',
     specialization: 'Development Doctor',
-    hospital_id: '',
+    hospital_id: FALLBACK_HOSPITAL_ID,
     role: 'doctor',
     avatar_url: null,
     is_active: true,
@@ -80,6 +120,16 @@ export async function getCurrentDoctorProfile(session?: Session | null): Promise
   }
 
   if (!data) {
+    if (import.meta.env.VITE_APP_MODE === 'development') {
+      try {
+        const created = await ensureDoctorProfileForSession(currentSession)
+        if (created) {
+          return { data: created, error: null }
+        }
+      } catch (error) {
+        return { data: null, error: new DoctorAuthError(error instanceof Error ? error.message : 'Unable to create missing doctor profile', 'DATABASE_ERROR') }
+      }
+    }
     return { data: null, error: new DoctorAuthError('Doctor profile not found. Please contact your hospital administrator.', 'DOCTOR_PROFILE_MISSING') }
   }
 
