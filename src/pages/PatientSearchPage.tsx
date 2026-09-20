@@ -1,6 +1,7 @@
 import { FormEvent, useState } from 'react'
 import { Search, ShieldCheck } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { LanguageSwitcher } from '../components/ui/LanguageSwitcher'
 import { searchPatientByIdentifier } from '../services/supabase/patientService'
 import type { PatientRecord } from '../types/database'
 
@@ -40,12 +41,15 @@ export function PatientSearchPage() {
   return (
     <main className="min-h-screen bg-[#F8FAFC] p-6 text-slate-900">
       <div className="mx-auto max-w-3xl">
-        <div className="mb-8 flex items-center justify-between">
+        <div className="mb-8 flex items-center justify-between gap-3">
           <div>
             <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Patient discovery</div>
             <h1 className="mt-1 text-3xl font-semibold tracking-tight">Find Patient</h1>
           </div>
-          <button type="button" onClick={() => navigate('/doctor/dashboard')} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">Dashboard</button>
+          <div className="flex items-center gap-3">
+            <LanguageSwitcher compact />
+            <button type="button" onClick={() => navigate('/doctor/dashboard')} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">Dashboard</button>
+          </div>
         </div>
 
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   CheckCircle2,
   Send,
@@ -20,12 +20,54 @@ import { LANGUAGE_LOCALES, t } from '../../i18n'
 import { savePatientSummary } from '../../services/patientRegistryService'
 
 export function SummaryScreen() {
-  const { language, identity, summary, reset, isEmergency, geminiLoading, interviewAnswers, redFlags, historyMode } = useApp()
+  const {
+    language,
+    identity,
+    summary,
+    reset,
+    isEmergency,
+    geminiLoading,
+    interviewAnswers,
+    redFlags,
+    historyMode,
+    finalizeSummary,
+    step,
+  } = useApp()
   const isHi = language === 'hi'
   const [done, setDone] = useState(false)
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null)
 
-  if (!summary) return null
+  useEffect(() => {
+    if (step === 'summary' && !summary) {
+      void finalizeSummary()
+    }
+  }, [step, summary, finalizeSummary])
+
+  if (!summary) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-medikiosk-surface via-white to-teal-50 p-6 flex items-center justify-center">
+        <div className="max-w-md w-full rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 text-slate-600">
+            <Stethoscope className="h-8 w-8" />
+          </div>
+          <h2 className="text-2xl font-bold text-slate-900 mb-2">
+            {isHi ? 'सारांश तैयार किया जा रहा है' : 'Preparing summary'}
+          </h2>
+          <p className="text-slate-600">
+            {isHi
+              ? 'कृपया कुछ सेकंड प्रतीक्षा करें।'
+              : 'Please wait a moment while the clinical summary loads.'}
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-6 w-full kiosk-btn-primary"
+          >
+            {isHi ? 'पुनः लोड करें' : 'Reload'}
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   const speakSummary = () => {
     if ('speechSynthesis' in window) {
@@ -39,15 +81,6 @@ export function SummaryScreen() {
   }
 
   const handleComplete = async () => {
-    // 1. Always save to localStorage first (works offline)
-    localStorage.setItem(
-      'medikiosk_physician_summaries',
-      JSON.stringify([
-        summary,
-        ...JSON.parse(localStorage.getItem('medikiosk_physician_summaries') || '[]'),
-      ])
-    )
-
     setDone(true)
 
     const patientRecordId = identity?.databaseId ?? identity?.patientId

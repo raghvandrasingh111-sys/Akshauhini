@@ -1,7 +1,9 @@
 import { FormEvent, useEffect, useState } from 'react'
-import { ArrowUpRight, Check, FileImage, FileText, Fingerprint, HeartPulse, LockKeyhole, LogOut, ShieldCheck, UploadCloud } from 'lucide-react'
+import { ArrowUpRight, Check, FileImage, FileText, Fingerprint, HeartPulse, LockKeyhole, LogOut, PlusCircle, ShieldCheck, UploadCloud } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { useApp } from '../context/AppContext'
 import { usePatientAuth } from '../context/PatientAuthContext'
+import { LanguageSwitcher } from '../components/ui/LanguageSwitcher'
 import { isValidPatientPhone, registerEmailPatient, registerGooglePatient, registerManualPatient, signInPatientWithEmail, signInPatientWithGoogle, signInPatient, signUpPatient, signUpPatientWithEmail } from '../services/supabase/patientAuthService'
 import { getPatientConsentRequests, getPatientDocuments, getPatientIntakes, respondToPatientConsent, uploadPatientDocument, type PatientIntakeRecord } from '../services/supabase/patientPortalService'
 import type { ConsentRequest, MedicalDocument } from '../types/database'
@@ -216,6 +218,8 @@ export function LegacyPatientLogin() {
 }
 
 function PatientDashboard() {
+  const navigate = useNavigate()
+  const { reset } = useApp()
   const { patient, signOut } = usePatientAuth()
   const [section, setSection] = useState<'overview' | 'history' | 'documents' | 'approvals'>('overview')
   const [documents, setDocuments] = useState<MedicalDocument[]>([])
@@ -225,6 +229,11 @@ function PatientDashboard() {
   const [message, setMessage] = useState('')
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [documentType, setDocumentType] = useState<MedicalDocument['document_type']>('lab_report')
+
+  const startIntake = () => {
+    reset()
+    navigate('/patient/intake')
+  }
 
   useEffect(() => {
     if (!patient?.databaseId) return
@@ -243,6 +252,7 @@ function PatientDashboard() {
     }
 
     const hospitalId = patient.hospitalId || import.meta.env.VITE_DEFAULT_HOSPITAL_ID || 'default-hospital'
+    const hospitalLabel = hospitalId && hospitalId !== 'default-hospital' ? hospitalId : (import.meta.env.VITE_DEFAULT_HOSPITAL_ID || 'Development Hospital')
 
     try {
       const doc = await uploadPatientDocument({
@@ -251,7 +261,7 @@ function PatientDashboard() {
         patientId: patient.databaseId,
         documentType,
       })
-      setDocuments(current => [doc, ...current]); setSelectedFile(null); setMessage('Document uploaded securely.')
+      setDocuments(current => [doc, ...current]); setSelectedFile(null); setMessage(`Document uploaded securely to ${hospitalLabel}.`)
     } catch (error) { setMessage(error instanceof Error ? error.message : 'Upload failed') }
   }
 
@@ -262,15 +272,15 @@ function PatientDashboard() {
     } catch (error) { setMessage(error instanceof Error ? error.message : 'Could not update approval') }
   }
 
-  return <main className="min-h-screen bg-[#F3F8F6] text-slate-900"><header className="border-b border-slate-200 bg-white"><div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5"><div className="flex items-center gap-3"><div className="rounded-xl bg-[#0F5132] p-2 text-white"><HeartPulse className="h-5 w-5" /></div><div><p className="text-xs font-bold uppercase tracking-[0.2em] text-teal-700">Sanjeevani patient space</p><h1 className="text-xl font-black">Good to see you, {patient.name.split(' ')[0]}</h1></div></div><button onClick={() => void signOut()} className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold"><LogOut className="h-4 w-4" /> Sign out</button></div></header>
+  return <main className="min-h-screen bg-[#F3F8F6] text-slate-900"><header className="border-b border-slate-200 bg-white"><div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5"><div className="flex items-center gap-3"><div className="rounded-xl bg-[#0F5132] p-2 text-white"><HeartPulse className="h-5 w-5" /></div><div><p className="text-xs font-bold uppercase tracking-[0.2em] text-teal-700">Sanjeevani patient space</p><h1 className="text-xl font-black">Good to see you, {patient.name.split(' ')[0]}</h1></div></div><div className="flex items-center gap-3"><LanguageSwitcher compact /><button onClick={startIntake} className="flex items-center gap-2 rounded-xl bg-[#0F5132] px-3 py-2 text-sm font-semibold text-white"><PlusCircle className="h-4 w-4" /> Start intake</button><button onClick={() => void signOut()} className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold"><LogOut className="h-4 w-4" /> Sign out</button></div></div></header>
     <div className="mx-auto max-w-7xl p-6 md:p-8"><section className="relative overflow-hidden rounded-[2rem] bg-[#0B2924] p-8 text-white shadow-xl md:p-10"><div className="absolute -right-16 -top-24 h-72 w-72 rounded-full bg-teal-300/15 blur-3xl" /><div className="relative grid gap-8 md:grid-cols-[1fr_auto] md:items-end"><div><p className="text-sm font-bold uppercase tracking-[0.22em] text-teal-300">Private health command center</p><h2 className="mt-3 max-w-2xl text-4xl font-black tracking-tight md:text-6xl">You decide who gets to see your story.</h2><p className="mt-4 max-w-xl text-teal-100/70">Upload records once, keep them organized, and approve every clinical access request with a clear purpose.</p></div><div className="rounded-2xl border border-white/10 bg-white/10 p-5 backdrop-blur"><p className="text-xs uppercase tracking-wider text-teal-200">Patient ID</p><p className="mt-2 font-mono text-2xl font-bold">{patient.patientId}</p><p className="mt-2 text-xs text-teal-100/60">Share only with trusted care teams</p></div></div></section>
       <nav className="mt-6 flex gap-2 overflow-x-auto rounded-2xl border border-slate-200 bg-white p-2">{([['overview','Overview'],['history','My health history'],['documents','My documents'],['approvals',`Approvals ${requests.filter(r => r.status === 'pending').length ? `(${requests.filter(r => r.status === 'pending').length})` : ''}`]] as const).map(([key, label]) => <button key={key} onClick={() => setSection(key)} className={`whitespace-nowrap rounded-xl px-5 py-3 text-sm font-bold ${section === key ? 'bg-[#0F5132] text-white' : 'text-slate-500 hover:bg-slate-50'}`}>{label}</button>)}</nav>
       {message && <div className="mt-5 rounded-xl border border-teal-200 bg-teal-50 p-4 text-sm text-teal-800">{message}</div>}
-      {busy ? <div className="py-16 text-center text-slate-500">Loading your private space...</div> : section === 'overview' ? <Overview documents={documents} requests={requests} intakeCount={intakes.length} onSection={setSection} /> : section === 'history' ? <HealthHistory intakes={intakes} /> : section === 'documents' ? <Documents documents={documents} selectedFile={selectedFile} setSelectedFile={setSelectedFile} documentType={documentType} setDocumentType={setDocumentType} upload={upload} /> : <Approvals requests={requests} respond={respond} />}
+      {busy ? <div className="py-16 text-center text-slate-500">Loading your private space...</div> : section === 'overview' ? <Overview documents={documents} requests={requests} intakeCount={intakes.length} onSection={setSection} onStartIntake={startIntake} /> : section === 'history' ? <HealthHistory intakes={intakes} /> : section === 'documents' ? <Documents documents={documents} selectedFile={selectedFile} setSelectedFile={setSelectedFile} documentType={documentType} setDocumentType={setDocumentType} upload={upload} /> : <Approvals requests={requests} respond={respond} />}
     </div></main>
 }
 
-function Overview({ documents, requests, intakeCount, onSection }: { documents: MedicalDocument[]; requests: ConsentRequest[]; intakeCount: number; onSection: (section: 'history' | 'documents' | 'approvals') => void }) { return <div className="mt-6 grid gap-5 md:grid-cols-4"><PortalCard icon={<HeartPulse />} title="Health history" value={String(intakeCount)} text="Completed clinical questionnaires" action="View questions" onClick={() => onSection('history')} /><PortalCard icon={<FileText />} title="Your documents" value={String(documents.length)} text="Private reports and prescriptions" action="Open documents" onClick={() => onSection('documents')} /><PortalCard icon={<ShieldCheck />} title="Permission center" value={String(requests.filter(r => r.status === 'pending').length)} text="Requests waiting for your decision" action="Review approvals" onClick={() => onSection('approvals')} /><PortalCard icon={<LockKeyhole />} title="Security" value="ON" text="Password-protected Supabase account" action="Protected by design" /></div> }
+function Overview({ documents, requests, intakeCount, onSection, onStartIntake }: { documents: MedicalDocument[]; requests: ConsentRequest[]; intakeCount: number; onSection: (section: 'history' | 'documents' | 'approvals') => void; onStartIntake: () => void }) { return <div className="mt-6 grid gap-5 md:grid-cols-5"><PortalCard icon={<HeartPulse />} title="Health history" value={String(intakeCount)} text="Completed clinical questionnaires" action="View questions" onClick={() => onSection('history')} /><PortalCard icon={<FileText />} title="New intake" value="Ready" text="Begin a fresh clinical questionnaire" action="Start intake" onClick={onStartIntake} /><PortalCard icon={<FileText />} title="Your documents" value={String(documents.length)} text="Private reports and prescriptions" action="Open documents" onClick={() => onSection('documents')} /><PortalCard icon={<ShieldCheck />} title="Permission center" value={String(requests.filter(r => r.status === 'pending').length)} text="Requests waiting for your decision" action="Review approvals" onClick={() => onSection('approvals')} /><PortalCard icon={<LockKeyhole />} title="Security" value="ON" text="Password-protected Supabase account" action="Protected by design" /></div> }
 
 function HealthHistory({ intakes }: { intakes: PatientIntakeRecord[] }) {
   return <section className="mt-6 space-y-5">{intakes.length === 0 ? <div className="rounded-3xl border border-slate-200 bg-white p-12 text-center text-sm text-slate-500">No clinical questionnaire has been completed yet.</div> : intakes.map(intake => {

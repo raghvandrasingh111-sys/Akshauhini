@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Shield, Volume2, CheckCircle2 } from 'lucide-react'
 import { useApp } from '../../context/AppContext'
 import { getConsentText, LANGUAGE_LOCALES, t } from '../../i18n'
+import { playQuestionAudio } from '../../services/sarvamSpeechService'
 
 const BASE_CONSENT_ITEMS = [
   {
@@ -40,15 +41,21 @@ export function ConsentScreen() {
     setChecked(next)
   }
 
-  const playAudio = () => {
+  const playAudio = async () => {
     setAudioPlayed(true)
-    if ('speechSynthesis' in window) {
-      const text = isHi
-        ? 'संजीवनी (Sanjeevani) आपका स्वास्थ्य इतिहास सुरक्षित रूप से एकत्र करेगा। यह निदान नहीं है।'
-        : 'Sanjeevani will securely collect your health history. This is not a diagnosis.'
-      const utterance = new SpeechSynthesisUtterance(text)
-      utterance.lang = LANGUAGE_LOCALES[language]
-      speechSynthesis.speak(utterance)
+    const text = isHi
+      ? 'संजीवनी (Sanjeevani) आपका स्वास्थ्य इतिहास सुरक्षित रूप से एकत्र करेगा। यह निदान नहीं है।'
+      : 'Sanjeevani will securely collect your health history. This is not a diagnosis.'
+
+    try {
+      await playQuestionAudio(text, language)
+    } catch (error) {
+      console.warn('[ConsentScreen] TTS unavailable, falling back to Web Speech:', error)
+      if ('speechSynthesis' in window) {
+        const utterance = new SpeechSynthesisUtterance(text)
+        utterance.lang = LANGUAGE_LOCALES[language]
+        speechSynthesis.speak(utterance)
+      }
     }
   }
 

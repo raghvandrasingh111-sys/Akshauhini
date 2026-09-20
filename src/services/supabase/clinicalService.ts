@@ -26,6 +26,35 @@ export async function getPatientTimeline(patientId: string) {
   return data ?? []
 }
 
+export async function createPatientTimelineEvent(params: {
+  patientId: string
+  hospitalId: string
+  opdVisitId?: string | null
+  eventType: string
+  title: string
+  description?: string
+  sourceTable?: string
+  sourceId?: string
+  eventAt?: string
+}) {
+  const client = requireSupabase()
+  const { error } = await client.from('patient_timeline_events').insert({
+    patient_id: params.patientId,
+    hospital_id: params.hospitalId,
+    opd_visit_id: params.opdVisitId ?? null,
+    event_type: params.eventType,
+    title: params.title,
+    description: params.description ?? null,
+    source_table: params.sourceTable ?? null,
+    source_id: params.sourceId ? params.sourceId : null,
+    event_at: params.eventAt ?? new Date().toISOString(),
+  })
+  if (error) {
+    console.error('[ClinicalService] Timeline event failed:', error.message)
+    throw error
+  }
+}
+
 export async function saveConsultation(params: {
   patientId: string
   visitId: string
@@ -52,6 +81,36 @@ export async function saveConsultation(params: {
     : client.from('consultations').insert(payload)
   const { data, error } = await query.select('*').single()
   if (error) throw error
+
+  try {
+    const hospitalId = await client.from('opd_visits').select('hospital_id').eq('id', params.visitId).single()
+    const resolvedHospitalId = hospitalId.data?.hospital_id ?? null
+    if (resolvedHospitalId) {
+      await createPatientTimelineEvent({
+        patientId: params.patientId,
+        hospitalId: resolvedHospitalId,
+        opdVisitId: params.visitId,
+        eventType: params.status === 'completed' ? 'consultation_completed' : 'consultation_draft',
+        title: params.status === 'completed' ? 'Doctor Consultation' : 'Consultation Draft Saved',
+        description: params.status === 'completed'
+          ? `Completed consultation: ${params.diagnosis ?? 'Clinical review completed'}`
+          : `Draft consultation saved: ${params.diagnosis ?? 'Initial assessment notes created'}`,
+        sourceTable: 'consultations',
+        sourceId: data.id,
+      })
+    }
+  } catch (timelineError) {
+    console.error('[ClinicalService] Consultation timeline update failed:', timelineError)
+  }
+
+  await writeAuditLog({
+    patientId: params.patientId,
+    action: params.status === 'completed' ? 'CONSULTATION_COMPLETED' : 'CONSULTATION_DRAFT_SAVED',
+    entityType: 'consultation',
+    entityId: data.id,
+    metadata: { status: params.status },
+  })
+
   return data
 }
 

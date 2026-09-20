@@ -5,8 +5,8 @@ import { useNavigate } from 'react-router-dom'
 
 export function LoginPage() {
   const navigate = useNavigate()
-  const [email, setEmail] = useState('doctor@sanjeevani.demo')
-  const [password, setPassword] = useState('demo123456')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [fullName, setFullName] = useState('')
   const [mode, setMode] = useState<'login' | 'signup'>('login')
   const [isLoading, setIsLoading] = useState(false)

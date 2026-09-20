@@ -103,18 +103,24 @@ function reducer(state: AppState, action: Action): AppState {
     case 'TOGGLE_VOICE':
       return { ...state, voiceEnabled: !state.voiceEnabled }
     case 'FINALIZE_SUMMARY': {
-      if (!state.identity) return state
+      const activeIdentity: PatientIdentity = state.identity ?? {
+        name: 'New Patient',
+        age: 0,
+        gender: 'other',
+        verificationMethod: 'manual',
+        verificationTimestamp: new Date().toISOString(),
+      }
       const ayush =
         state.historyMode === 'ayush' ? buildAyushProfile(state.interviewAnswers) : undefined
       const summary = generateClinicalSummary(
-        state.identity,
+        activeIdentity,
         state.interviewAnswers,
         state.documents,
         state.redFlags,
         ayush,
         action.initialAnalysis
       )
-      return { ...state, summary, step: 'summary', geminiLoading: !action.initialAnalysis }
+      return { ...state, identity: activeIdentity, summary, step: 'summary', geminiLoading: !action.initialAnalysis }
     }
     case 'SET_GEMINI_LOADING':
       return {
@@ -241,16 +247,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
   )
 
   const finalizeSummary = useCallback(async () => {
-    dispatch({ type: 'FINALIZE_SUMMARY' })
-    if (state.identity) {
-      await runGemini(state.identity, state.interviewAnswers, state.documents, state.redFlags)
+    const activeIdentity = state.identity ?? {
+      name: 'New Patient',
+      age: 0,
+      gender: 'other' as const,
+      verificationMethod: 'manual' as const,
+      verificationTimestamp: new Date().toISOString(),
     }
+
+    dispatch({ type: 'FINALIZE_SUMMARY' })
+    await runGemini(activeIdentity, state.interviewAnswers, state.documents, state.redFlags)
   }, [state.identity, state.interviewAnswers, state.documents, state.redFlags, runGemini])
 
   const refreshGeminiAnalysis = useCallback(async () => {
-    if (state.identity) {
-      await runGemini(state.identity, state.interviewAnswers, state.documents, state.redFlags)
+    const activeIdentity = state.identity ?? {
+      name: 'New Patient',
+      age: 0,
+      gender: 'other' as const,
+      verificationMethod: 'manual' as const,
+      verificationTimestamp: new Date().toISOString(),
     }
+
+    await runGemini(activeIdentity, state.interviewAnswers, state.documents, state.redFlags)
   }, [state.identity, state.interviewAnswers, state.documents, state.redFlags, runGemini])
 
   const verifySummary = useCallback(() => {

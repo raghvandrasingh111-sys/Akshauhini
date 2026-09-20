@@ -1,44 +1,100 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ArrowLeft, CheckCircle2, Search, Send, ShieldCheck } from 'lucide-react'
 import { useApp } from '../../context/AppContext'
-import {
-  createAccessRequest,
-  getAccessRequests,
-  searchPatient,
-  type PatientRegistryRecord,
-} from '../../services/patientRegistryService'
-import type { DoctorAccessRequest } from '../../types'
+import { useAuth } from '../../context/AuthContext'
+import { searchPatientByIdentifier } from '../../services/supabase/patientService'
+import { requestPatientConsent } from '../../services/supabase/consentService'
+import { getPatientConsentRequests } from '../../services/supabase/patientPortalService'
+import type { ConsentRequest, PatientRecord } from '../../types/database'
 
 export function DoctorAccessScreen() {
   const { setStep } = useApp()
+  const { doctor } = useAuth()
   const [patientId, setPatientId] = useState('')
-  const [patient, setPatient] = useState<PatientRegistryRecord | null>(null)
-  const [requests, setRequests] = useState<DoctorAccessRequest[]>([])
-  const [doctorName, setDoctorName] = useState('Dr. Ananya Mehta')
-  const [facility, setFacility] = useState('Sanjeevani OPD')
+  const [patient, setPatient] = useState<PatientRecord | null>(null)
+  const [requests, setRequests] = useState<ConsentRequest[]>([])
+  const [doctorName, setDoctorName] = useState(doctor?.full_name ?? 'Dr. Ananya Mehta')
+  const [facility, setFacility] = useState(doctor ? 'Secure hospital access' : 'Sanjeevani OPD')
   const [purpose, setPurpose] = useState('Clinical consultation and continuity of care')
   const [error, setError] = useState('')
+  const [sending, setSending] = useState(false)
+
+  useEffect(() => {
+    if (doctor?.full_name) {
+      setDoctorName(doctor.full_name)
+    }
+    if (doctor?.hospital_id) {
+      setFacility('Hospital-authorized access')
+    }
+  }, [doctor])
 
   const findPatient = async () => {
-    const result = await searchPatient(patientId)
-    setPatient(result)
-    setRequests(result ? getAccessRequests(result.patientId) : [])
-    setError(result ? '' : 'No patient found for this phone number or Patient ID.')
+    const value = patientId.trim()
+    if (!value) {
+      setError('Enter a patient ID, phone number, or ABHA ID.')
+      setPatient(null)
+      setRequests([])
+      return
+    }
+
+    try {
+      const result = await searchPatientByIdentifier(value)
+      if (!result) {
+        setPatient(null)
+        setRequests([])
+        setError('No patient found for this identifier.')
+        return
+      }
+
+      setPatient(result)
+      const consentRequests = await getPatientConsentRequests(result.id)
+      setRequests(consentRequests)
+      setError('')
+    } catch (lookupError) {
+      setPatient(null)
+      setRequests([])
+      setError(lookupError instanceof Error ? lookupError.message : 'Unable to search patient.')
+    }
   }
 
-  const requestAccess = () => {
-    if (!patient) return
-    const request = createAccessRequest({
-      patientId: patient.patientId,
-      doctorId: doctorName.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-      doctorName,
-      facility,
-      purpose,
-    })
-    setRequests((current) => [request, ...current])
+  const requestAccess = async () => {
+    if (!patient) {
+      setError('Search for a patient before requesting access.')
+      return
+    }
+
+    if (!doctor) {
+      setError('Sign in as a doctor first to send a real access request.')
+      return
+    }
+
+    setSending(true)
+    setError('')
+
+    try {
+      const result = await requestPatientConsent({
+        patientId: patient.id,
+        hospitalId: doctor.hospital_id || 'default-hospital',
+        purpose,
+        requestedDataTypes: ['clinical_summary', 'documents', 'timeline', 'ai_clinical_brief'],
+      })
+
+      if (result.error) {
+        setError(result.error.message)
+        return
+      }
+
+      const nextRequests = await getPatientConsentRequests(patient.id)
+      setRequests(nextRequests)
+      setError('')
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : 'Unable to send access request.')
+    } finally {
+      setSending(false)
+    }
   }
 
-  const approved = requests.some((request) => request.status === 'approved')
+  const approved = requests.some((request) => request.status === 'granted')
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-teal-950 p-4 md:p-6 text-white">
@@ -70,7 +126,7 @@ export function DoctorAccessScreen() {
               <input value={doctorName} onChange={(event) => setDoctorName(event.target.value)} placeholder="Doctor name" className="w-full px-4 py-3 rounded-xl border border-slate-200" />
               <input value={facility} onChange={(event) => setFacility(event.target.value)} placeholder="Hospital or clinic" className="w-full px-4 py-3 rounded-xl border border-slate-200" />
               <textarea value={purpose} onChange={(event) => setPurpose(event.target.value)} rows={3} className="w-full px-4 py-3 rounded-xl border border-slate-200 resize-none" />
-              <button onClick={requestAccess} disabled={!patient || requests.some((request) => request.status === 'pending')} className="w-full py-3 rounded-xl bg-slate-900 text-white font-bold flex items-center justify-center gap-2 disabled:opacity-40"><Send className="w-4 h-4" />Request patient approval</button>
+              <button onClick={() => void requestAccess()} disabled={!patient || sending || requests.some((request) => request.status === 'pending')} className="w-full py-3 rounded-xl bg-slate-900 text-white font-bold flex items-center justify-center gap-2 disabled:opacity-40"><Send className="w-4 h-4" />{sending ? 'Sending...' : 'Request patient approval'}</button>
             </div>
           </section>
 
@@ -85,15 +141,15 @@ export function DoctorAccessScreen() {
               <div className="space-y-4">
                 <div className="p-4 rounded-2xl bg-white text-slate-900">
                   <p className="text-xs uppercase tracking-wider font-bold text-slate-500">Patient located</p>
-                  <p className="text-xl font-bold mt-1">{patient.name}</p>
-                  <p className="text-sm text-slate-500">Patient ID: <span className="font-mono font-bold">{patient.patientId}</span></p>
+                  <p className="text-xl font-bold mt-1">{patient.full_name}</p>
+                  <p className="text-sm text-slate-500">Patient ID: <span className="font-mono font-bold">{patient.patient_id}</span></p>
                 </div>
                 <div className="space-y-3">
                   {requests.map((request) => (
                     <div key={request.id} className="p-4 rounded-2xl bg-white/10 border border-white/15">
                       <div className="flex items-center justify-between gap-3">
-                        <div><p className="font-bold">{request.doctorName}</p><p className="text-xs text-slate-300">{request.facility} · {request.purpose}</p></div>
-                        <span className={`px-2.5 py-1 rounded-full text-xs font-bold capitalize ${request.status === 'approved' ? 'bg-emerald-400/20 text-emerald-200' : request.status === 'denied' ? 'bg-rose-400/20 text-rose-200' : 'bg-amber-400/20 text-amber-200'}`}>{request.status}</span>
+                        <div><p className="font-bold">{doctorName}</p><p className="text-xs text-slate-300">{facility} · {request.purpose}</p></div>
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-bold capitalize ${request.status === 'granted' ? 'bg-emerald-400/20 text-emerald-200' : request.status === 'denied' ? 'bg-rose-400/20 text-rose-200' : 'bg-amber-400/20 text-amber-200'}`}>{request.status}</span>
                       </div>
                     </div>
                   ))}
@@ -101,11 +157,10 @@ export function DoctorAccessScreen() {
                 {approved ? (
                   <div className="p-4 rounded-2xl bg-emerald-500/15 border border-emerald-300/30 text-emerald-100">
                     <div className="flex items-center gap-2 font-bold"><CheckCircle2 className="w-5 h-5" /> Authorized clinical record</div>
-                    <p className="text-sm mt-2">{patient.summaries.length} intake record(s) are available to this authorized doctor.</p>
-                    {patient.summaries.map((summary) => <div key={summary.id} className="mt-3 p-3 rounded-xl bg-black/20 text-sm"><span className="font-semibold">{summary.chiefComplaint}</span><span className="text-slate-300"> · {new Date(summary.createdAt).toLocaleDateString()}</span></div>)}
+                    <p className="text-sm mt-2">This patient has approved access for this doctor. The doctor can now open the patient record from the authenticated doctor dashboard.</p>
                   </div>
                 ) : (
-                  <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-300/30 text-amber-100 text-sm">Request sent. The patient must approve it from the kiosk using the same phone number.</div>
+                  <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-300/30 text-amber-100 text-sm">Request sent. The patient must approve it from the patient portal before the doctor can view the full record.</div>
                 )}
               </div>
             )}

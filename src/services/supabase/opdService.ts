@@ -2,8 +2,8 @@ import { supabase } from '../../lib/supabase'
 import type { DashboardMetrics, OpdVisit, QueueVisit } from '../../types/database'
 
 export async function getDashboardMetrics(hospitalId: string): Promise<DashboardMetrics> {
-  if (!supabase) {
-    throw new Error('Supabase is not configured')
+  if (!supabase || !hospitalId || hospitalId.trim() === '') {
+    return { waiting: 0, inConsultation: 0, completed: 0, priorityAlerts: 0 }
   }
 
   const { data, error } = await supabase
@@ -13,7 +13,7 @@ export async function getDashboardMetrics(hospitalId: string): Promise<Dashboard
     .gte('arrival_time', new Date(new Date().setHours(0, 0, 0, 0)).toISOString())
 
   if (error || !data) {
-    throw error ?? new Error('Unable to load dashboard metrics')
+    return { waiting: 0, inConsultation: 0, completed: 0, priorityAlerts: 0 }
   }
 
   return {
@@ -25,8 +25,8 @@ export async function getDashboardMetrics(hospitalId: string): Promise<Dashboard
 }
 
 export async function getQueueForToday(hospitalId: string): Promise<QueueVisit[]> {
-  if (!supabase) {
-    throw new Error('Supabase is not configured')
+  if (!supabase || !hospitalId || hospitalId.trim() === '') {
+    return []
   }
 
   const { data, error } = await supabase
@@ -37,7 +37,7 @@ export async function getQueueForToday(hospitalId: string): Promise<QueueVisit[]
     .order('queue_position', { ascending: true })
 
   if (error) {
-    throw error
+    return []
   }
 
   return (data as QueueVisit[]) ?? []

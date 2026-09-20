@@ -23,14 +23,32 @@ export async function searchPatientByABHA(abhaNumber: string): Promise<PatientRe
 }
 
 export async function searchPatientByIdentifier(identifier: string): Promise<PatientRecord | null> {
-  if (!supabase) throw new Error('Supabase is not configured')
-  const normalized = identifier.replace(/\D/g, '').slice(-10)
-  const query = supabase.from('patients').select('*')
-  const { data, error } = normalized.length === 10
-    ? await query.or(`patient_id.eq.${normalized},phone.eq.${normalized},abha_number.eq.${normalized}`).maybeSingle()
-    : await query.eq('patient_id', identifier.trim()).maybeSingle()
-  if (error) throw error
-  return (data as PatientRecord | null) ?? null
+  const value = identifier.trim()
+  if (!value) return null
+
+  if (!supabase) {
+    throw new Error('Supabase is not configured')
+  }
+
+  const exactQuery = supabase.from('patients').select('*')
+
+  const patientIdResult = await exactQuery.eq('patient_id', value.toUpperCase()).maybeSingle()
+  if (patientIdResult.error) throw patientIdResult.error
+  if (patientIdResult.data) return patientIdResult.data as PatientRecord
+
+  const abhaInput = normalizeAbhaNumber(value)
+  if (abhaInput) {
+    const abhaResult = await supabase
+      .from('patients')
+      .select('*')
+      .or(`abha_number.eq.${abhaInput},masked_abha.eq.${value}`)
+      .maybeSingle()
+
+    if (abhaResult.error) throw abhaResult.error
+    if (abhaResult.data) return abhaResult.data as PatientRecord
+  }
+
+  return null
 }
 
 export async function getPatientById(patientId: string): Promise<PatientRecord | null> {
