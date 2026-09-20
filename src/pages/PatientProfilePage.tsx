@@ -16,6 +16,7 @@ import { getCurrentPatientVisit, getPatientById } from '../services/supabase/pat
 import { getConsentStatus, grantConsent, requestPatientConsent } from '../services/supabase/consentService'
 import { createPatientTimelineEvent, getPatientTimeline, saveConsultation, writeAuditLog } from '../services/supabase/clinicalService'
 import { getPatientDocuments, getPatientIntakes, type PatientIntakeRecord } from '../services/supabase/patientPortalService'
+import { getMedicalDocumentUrl } from '../services/supabase/documentService'
 import { compareClinicalData } from '../services/clinicalComparisonService'
 import { analyzePatientIntakeWithGemini, generateSimulatedGeminiAnalysis } from '../services/geminiService'
 import { detectRedFlags } from '../services/triageEngine'
@@ -42,6 +43,20 @@ export function PatientProfilePage() {
   const [consultationFollowUp, setConsultationFollowUp] = useState('')
   const [consultationReferral, setConsultationReferral] = useState('')
   const [consultationSaving, setConsultationSaving] = useState(false)
+  const [openingDocumentId, setOpeningDocumentId] = useState<string | null>(null)
+
+  async function openDocument(doc: MedicalDocument) {
+    try {
+      setOpeningDocumentId(doc.id)
+      const signedUrl = await getMedicalDocumentUrl(doc.storage_path, 600)
+      window.open(signedUrl, '_blank', 'noopener,noreferrer')
+      setMessage('')
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Unable to open document.')
+    } finally {
+      setOpeningDocumentId(null)
+    }
+  }
 
   useEffect(() => {
     const currentDoctor = doctor
@@ -512,8 +527,20 @@ export function PatientProfilePage() {
                 <div className="space-y-3">
                   {documents.map((doc) => (
                     <div key={doc.id} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                      <div className="font-semibold text-slate-800">{doc.file_name}</div>
-                      <div className="mt-1 text-xs uppercase tracking-[0.14em] text-slate-500">{doc.document_type}</div>
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <div className="font-semibold text-slate-800">{doc.file_name}</div>
+                          <div className="mt-1 text-xs uppercase tracking-[0.14em] text-slate-500">{doc.document_type}</div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => void openDocument(doc)}
+                          disabled={openingDocumentId === doc.id}
+                          className="rounded-lg border border-[#0F5132] bg-white px-3 py-1.5 text-xs font-semibold text-[#0F5132] disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {openingDocumentId === doc.id ? 'Opening...' : 'Open'}
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>

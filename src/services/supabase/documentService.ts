@@ -34,9 +34,23 @@ export async function uploadMedicalDocument(params: {
 
 export async function getMedicalDocumentUrl(storagePath: string, expiresInSeconds = 300) {
   if (!supabase) throw new Error('Supabase is not configured')
-  const { data, error } = await supabase.storage.from(bucket).createSignedUrl(storagePath, expiresInSeconds)
-  if (error) throw error
-  return data.signedUrl
+
+  const candidates = [bucket, 'documents']
+  let lastError: Error | null = null
+
+  for (const bucketName of candidates) {
+    const { data, error } = await supabase.storage.from(bucketName).createSignedUrl(storagePath, expiresInSeconds)
+    if (!error) return data.signedUrl
+
+    const message = error.message ?? 'Unknown storage error'
+    if (!/object.*not found|not found|does not exist|no such object/i.test(message)) {
+      throw error
+    }
+    lastError = new Error(message)
+  }
+
+  if (lastError) throw lastError
+  throw new Error('Unable to resolve document URL')
 }
 
 export async function deleteMedicalDocument(document: Pick<MedicalDocument, 'id' | 'storage_path'>) {

@@ -150,7 +150,7 @@ export async function uploadPatientDocument(params: {
   const effectiveHospitalId = params.hospitalId?.trim() || import.meta.env.VITE_DEFAULT_HOSPITAL_ID?.trim() || 'default-hospital'
   const path = `${effectiveHospitalId}/${patientUuid}/patient-${crypto.randomUUID()}.${extension}`
 
-  const upload = await client.storage.from('documents').upload(path, params.file, { upsert: false })
+  const upload = await client.storage.from('medical-documents').upload(path, params.file, { upsert: false })
   if (upload.error) throw upload.error
 
   const { data, error } = await client
